@@ -1,0 +1,461 @@
+{
+  "openapi": "3.0.0",
+  "servers": [
+    {
+      "url": "https://api.usewheelhouse.com/ss_api/v1/comp_set"
+    }
+  ],
+  "info": {
+    "license": {
+      "name": "All Rights Reserved"
+    },
+    "description": "The Comparable (Comp) Set API allows users to retrieve candidate competitive sets for hypothetical listings.\n",
+    "contact": {
+      "email": "tech-support@usewheelhouse.com"
+    },
+    "title": "Wheelhouse Comp Set API",
+    "termsOfService": "http://help.usewheelhouse.com/privacy-and-terms/terms-of-service",
+    "version": "1.0",
+    "x-logo": {
+      "url": "https://app.usewheelhouse.com/api/logo.png",
+      "backgroundColor": "#ffffff",
+      "altText": "Wheelhouse logo",
+      "href": "https://www.usewheelhouse.com/contact#"
+    }
+  },
+  "tags": [
+    {
+      "name": "Host",
+      "description": "https://api.usewheelhouse.com/ss_api/v1/comp_set/"
+    },
+    {
+      "name": "Rate Limit",
+      "description": "By default, our API is limited to 20 requests / minute.  This can be adjusted so please [reach out to us](mailto:tech-support@usewheelhouse.com) with any questions."
+    }
+  ],
+  "security": [
+    {
+      "CompSetApiKey": [],
+      "UserApiKey": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "CompSetApiKey": {
+        "name": "X-Integration-Api-Key",
+        "in": "header",
+        "type": "apiKey",
+        "description": "All comp set integrations will be given a comp set integration API key. [Contact\nus](mailto:tech-support@usewheelhouse.com) with a description of your use-case to get one.\n"
+      },
+      "UserApiKey": {
+        "name": "X-User-API-Key",
+        "in": "header",
+        "type": "apiKey",
+        "description": "Requests to the API must be made in a specific User's context. Specifically, the user to whom the\nUserApiKey belongs must be the owner of the listing/comp set being queried.\n\n**BOTH API key headers are required** to make Comp Set API calls     \n"
+      }
+    },
+    "schemas": {
+      "Listing": {
+        "type": "object",
+        "properties": {
+          "listing_id": {
+            "type": "integer",
+            "description": "Unique identifier for the listing."
+          },
+          "distance_meters": {
+            "type": "integer",
+            "description": "Distance in meters from the search location."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time the listing data was updated."
+          },
+          "amenities": {
+            "type": "string",
+            "description": "Comma-separated list of amenities available at the listing."
+          },
+          "anr_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Average nightly rate for the last 365 days. Null if not applicable."
+          },
+          "apr_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Average price per night for the last 365 days. Null if not applicable."
+          },
+          "available_nights_365_0": {
+            "type": "integer",
+            "description": "Number of available nights in the last 365 days."
+          },
+          "bathrooms": {
+            "type": "number",
+            "description": "Number of bathrooms, can be a decimal for half baths."
+          },
+          "bedrooms": {
+            "type": "integer",
+            "description": "Number of bedrooms."
+          },
+          "beds": {
+            "type": "integer",
+            "description": "Number of beds."
+          },
+          "blocked_nights_365_0": {
+            "type": "integer",
+            "description": "Number of blocked nights in the last 365 days."
+          },
+          "bookable_nights_365_0": {
+            "type": "integer",
+            "description": "Number of bookable nights in the last 365 days."
+          },
+          "booked_nights_365_0": {
+            "type": "integer",
+            "description": "Number of booked nights in the last 365 days."
+          },
+          "cleaning_fee": {
+            "type": "number",
+            "description": "Cleaning fee in the specified currency."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code for the listing's prices."
+          },
+          "guests_included": {
+            "type": "integer",
+            "description": "Number of guests included in the base price."
+          },
+          "lat": {
+            "type": "number",
+            "format": "float",
+            "description": "Latitude of the listing location."
+          },
+          "long": {
+            "type": "number",
+            "format": "float",
+            "description": "Longitude of the listing location."
+          },
+          "lead_time_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Lead time for booking for the last 365 days. Null if not applicable."
+          },
+          "listing_created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time when the listing was created."
+          },
+          "listing_last_updated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The last time the listing was updated."
+          },
+          "los_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Average length of stay for the last 365 days. Null if not applicable."
+          },
+          "market_id": {
+            "type": "integer",
+            "description": "Identifier for the market where the listing is located."
+          },
+          "nrevenue_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Net revenue for the last 365 days. Null if not applicable."
+          },
+          "nrevpar_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Net revenue per available room for the last 365 days. Null if not applicable."
+          },
+          "nrevpar_open_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Net revenue per available room for open nights in the last 365 days. Null if not applicable."
+          },
+          "occupancy_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Occupancy rate for the last 365 days. Null if not applicable."
+          },
+          "open_occupancy_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Occupancy rate for open nights in the last 365 days. Null if not applicable."
+          },
+          "openness_365_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Openness rate for the last 365 days. Null if not applicable."
+          },
+          "openness_90_0": {
+            "type": "number",
+            "nullable": true,
+            "description": "Openness rate for the last 90 days. Null if not applicable."
+          },
+          "property_type": {
+            "type": "string",
+            "description": "Type of property (e.g., house, apartment)."
+          },
+          "review_count": {
+            "type": "number",
+            "nullable": true,
+            "description": "Number of reviews for the listing. Null if no reviews."
+          },
+          "room_type": {
+            "type": "string",
+            "description": "Type of room (e.g., house, private room)."
+          },
+          "sleeps": {
+            "type": "integer",
+            "description": "Maximum number of people the listing can accommodate."
+          },
+          "star_rating": {
+            "type": "number",
+            "nullable": true,
+            "description": "Star rating of the listing. Null if not rated."
+          },
+          "thumb_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL for the thumbnail image of the listing."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the listing."
+          },
+          "url": {
+            "type": "string",
+            "description": "URL to view the listing."
+          },
+          "owner_name": {
+            "type": "string",
+            "description": "Name of the listing owner."
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the listing data."
+          },
+          "status": {
+            "type": "string",
+            "description": "Status of the listing (e.g., active, hidden, review, removed)."
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/candidates": {
+      "get": {
+        "summary": "Fetch Comp Set Candidate Listings",
+        "description": "Given the search params, retrieve a list of candidate listings that could be added to a comp set.",
+        "operationId": "getCompSetCandidates",
+        "security": [
+          {
+            "CompSetApiKey": [],
+            "UserApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "path",
+            "required": true,
+            "description": "Latitude of hypothetical listing.",
+            "schema": {
+              "type": "float"
+            }
+          },
+          {
+            "name": "long",
+            "in": "path",
+            "required": true,
+            "description": "Longitude of hypothetical listing.",
+            "schema": {
+              "type": "float"
+            }
+          },
+          {
+            "name": "radius",
+            "in": "path",
+            "required": true,
+            "description": "Radius in meters to search for candidate listings.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "description": "Maximum number of candidate listings.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "min_bedrooms",
+            "in": "path",
+            "required": false,
+            "description": "Minimum number of bedrooms in returned listings.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "max_bedrooms",
+            "in": "path",
+            "required": false,
+            "description": "Maximum number of bedrooms in returned listings.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "min_bathrooms",
+            "in": "path",
+            "required": false,
+            "description": "Minimum number of bathroomss in returned listings. Includes half-baths as decimals.",
+            "schema": {
+              "type": "float"
+            }
+          },
+          {
+            "name": "max_bathrooms",
+            "in": "path",
+            "required": false,
+            "description": "Maximum number of bathrooms in returned listings. Includes half-baths as decimals.",
+            "schema": {
+              "type": "float"
+            }
+          },
+          {
+            "name": "room_types",
+            "in": "path",
+            "required": false,
+            "description": "Array of room types to include in results. Possible values ['castle', 'apartment', 'camper', 'bus', 'tower', 'bnb', 'island', 'boat', 'hostel', 'houseboat', 'hotel', 'house', 'holiday_home', 'cabin', 'mill', 'other', 'room', 'camping', 'shared']",
+            "schema": {
+              "type": "array"
+            }
+          },
+          {
+            "name": "min_bookable_nights_0_365",
+            "in": "path",
+            "required": false,
+            "description": "Minimum number of bookable nights in the next 365 days.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "min_open_occupancy_0_365",
+            "in": "path",
+            "required": false,
+            "description": "Minimum open occupancy in the next 365 days (percentage)",
+            "schema": {
+              "type": "float"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved comp sets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "API key authorization failed"
+          },
+          "403": {
+            "description": "Listing authorization failed"
+          }
+        }
+      }
+    },
+    "/candidates/listing/listing_id": {
+      "get": {
+        "summary": "Fetch Comp Set candidate details for a specific listing",
+        "description": "Given a listing id in the path, retrieve the listing details.",
+        "operationId": "getCompSetCandidates",
+        "security": [
+          {
+            "CompSetApiKey": [],
+            "UserApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved comp set listing details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "API key authorization failed"
+          },
+          "403": {
+            "description": "Listing authorization failed"
+          }
+        }
+      }
+    },
+    "/candidates/listings": {
+      "get": {
+        "summary": "Fetch Comp Set candidate details for a set of listings",
+        "description": "Given a listing id in the path, retrieve the listing details.",
+        "operationId": "getCompSetCandidates",
+        "security": [
+          {
+            "CompSetApiKey": [],
+            "UserApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "listing_ids",
+            "in": "path",
+            "required": true,
+            "description": "Array of Wheelhouse listing ids."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved comp set listing details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "API key authorization failed"
+          },
+          "403": {
+            "description": "Listing authorization failed"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wheelhouse Underwriting Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface2: #f8f8fa;
+    --border: #e5e5ea;
+    --border-light: #f0f0f2;
+    --text: #1d1d1f;
+    --text-sec: #6e6e73;
+    --text-muted: #999;
+    --accent: #c026d3;       /* Wheelhouse magenta/purple */
+    --accent-light: #f0d4f5;
+    --accent-bg: #fdf4ff;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --yellow: #d97706;
+    --blue: #2563eb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+  input, select, button, textarea { font-family: inherit; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+  .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important; border: 1px solid var(--border) !important; max-width: 340px !important; }
+  .leaflet-popup-content { margin: 0 !important; padding: 0 !important; font-size: 12px !important; line-height: 1.5 !important; color: var(--text); width: 300px !important; }
+  .leaflet-popup-content b { color: var(--accent); }
+  .popup-card { padding: 14px 16px; }
+  .popup-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .popup-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: #f0f0f2; }
+  .popup-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .popup-subtitle { font-size: 11px; color: #6e6e73; }
+  .popup-divider { border: none; border-top: 1px solid #e5e5ea; margin: 8px 0; }
+  .popup-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #999; margin-bottom: 4px; }
+  .popup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 12px; }
+  .popup-grid-row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .popup-grid-label { color: #6e6e73; }
+  .popup-grid-value { font-weight: 600; text-align: right; }
+  .popup-highlight { background: #fdf4ff; border: 1px solid #f0d4f5; border-radius: 8px; padding: 8px 10px; margin-top: 8px; }
+  .popup-highlight-row { display: flex; justify-content: space-between; align-items: center; }
+  .popup-highlight-label { font-size: 11px; color: #6e6e73; }
+  .popup-highlight-value { font-size: 16px; font-weight: 700; color: #c026d3; }
+  .popup-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .popup-link { display: block; text-align: center; margin-top: 8px; padding: 6px; background: #f8f8fa; border-radius: 6px; color: #c026d3; text-decoration: none; font-size: 11px; font-weight: 600; }
+  .popup-link:hover { background: #fdf4ff; }
+  .popup-btn-row { display: flex; gap: 6px; margin-top: 8px; }
+  .popup-btn { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #e5e5ea; background: #fff; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; }
+  .popup-btn-primary { background: #c026d3; color: #fff; border: none; }
+  .popup-btn-primary:hover { background: #a21caf; }
+
+  /* Reports page styles */
+  .rpt-col-header { cursor: grab; user-select: none; position: relative; }
+  .rpt-col-header:active { cursor: grabbing; }
+  .rpt-col-header.drag-over { border-left: 3px solid var(--accent); }
+  .rpt-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+  .rpt-modal { background: var(--surface); border-radius: 16px; padding: 28px; max-width: 560px; width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto; }
+  .rpt-modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .rpt-modal label { font-size: 12px; color: var(--text-sec); font-weight: 500; display: block; margin-bottom: 4px; }
+  .rpt-modal input, .rpt-modal textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text); outline: none; margin-bottom: 12px; }
+  .rpt-modal textarea { min-height: 60px; resize: vertical; }
+  .rpt-type-btn { padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: center; transition: all .15s; flex: 1; }
+  .rpt-type-btn:hover { border-color: var(--accent-light); background: var(--accent-bg); }
+  .rpt-type-btn.active { border-color: var(--accent); background: var(--accent-bg); }
+  .rpt-type-btn .icon { font-size: 24px; margin-bottom: 4px; }
+  .rpt-type-btn .label { font-size: 13px; font-weight: 600; }
+  .rpt-type-btn .desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .rpt-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
+/* ─── helpers ─── */
+const fmt = (n, d=0) => n == null ? '—' : Number(n).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtUSD = n => n == null ? '—' : '$' + fmt(n);
+const fmtPct = n => n == null ? '—' : (n*100).toFixed(1)+'%';
+const ROOM_TYPES = ['house','apartment','cabin','bnb','hotel','hostel','room','camping','shared','castle','camper','bus','tower','island','boat','houseboat','holiday_home','mill','other'];
+
+/* ─── Columns definition (matches Wheelhouse Widgets) ─── */
+const ALL_COLUMNS = [
+  { key: 'title', label: 'Listing', w: 200, always: true },
+  { key: 'room_type', label: 'Room types', w: 90 },
+  { key: 'bedrooms', label: 'Bedrooms', w: 55 },
+  { key: 'bathrooms', label: 'Bathrooms', w: 60 },
+  { key: 'sleeps', label: 'Sleeps', w: 55 },
+  { key: 'source', label: 'Source', w: 70 },
+  { key: 'bookable_nights_365_0', label: 'Bookable nights', w: 80 },
+  { key: 'blocked_nights_365_0', label: 'Blocked nights', w: 80 },
+  { key: 'booked_nights_365_0', label: 'Booked nights', w: 80 },
+  { key: 'los_365_0', label: 'Length of stay', w: 75 },
+  { key: 'available_nights_365_0', label: 'Available nights', w: 80 },
+  { key: 'anr_365_0', label: 'Asking rate', w: 80, fmt: fmtUSD },
+  { key: 'occupancy_365_0', label: 'Occupancy', w: 65, fmt: fmtPct },
+  { key: 'nrevenue_365_0', label: 'Total Revenue', w: 100, fmt: fmtUSD },
+  { key: 'nrevpar_365_0', label: 'Total RevPAR', w: 80, fmt: fmtUSD },
+  { key: 'star_rating', label: 'Avg. rating', w: 60 },
+  { key: 'review_count', label: 'Review count', w: 70 },
+  { key: 'cleaning_fee', label: 'Cleaning fee', w: 75, fmt: fmtUSD },
+  { key: 'distance_meters', label: 'Distance (m)', w: 70 },
+];
+
+const DEFAULT_VISIBLE = new Set(['title','bedrooms','bathrooms','sleeps','nrevenue_365_0','occupancy_365_0','anr_365_0','nrevpar_365_0','star_rating','review_count','distance_meters']);
+
+/* ─── API (via local Flask proxy) ─── */
+async function fetchCandidates({ integrationKey, userKey, lat, long, radius, limit, minBed, maxBed, minBath, maxBath, roomTypes }) {
+  const p = new URLSearchParams();
+  p.set('lat', lat); p.set('long', long); p.set('radius', radius||5000); p.set('limit', limit||50);
+  if(minBed) p.set('min_bedrooms', minBed); if(maxBed) p.set('max_bedrooms', maxBed);
+  if(minBath) p.set('min_bathrooms', minBath); if(maxBath) p.set('max_bathrooms', maxBath);
+  if(roomTypes?.length) p.set('room_types', JSON.stringify(roomTypes));
+  const r = await fetch(`/api/candidates?${p}`, { headers:{'X-Integration-Api-Key':integrationKey,'X-User-API-Key':userKey}});
+  if(!r.ok) throw new Error(`API ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+async function fetchListingById({ integrationKey, userKey, listingId }) {
+  const r = await fetch(`/api/candidates/listing/${listingId}`, { headers:{'X-Integration-Api-Key':integrationKey,'X-User-API-Key':userKey}});
+  if(!r.ok) throw new Error(`API ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+async function geocode(address) {
+  const r = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
+  if(!r.ok) {
+    const err = await r.json().catch(()=>({}));
+    throw new Error(err.error || `Geocoding failed (${r.status})`);
+  }
+  const d = await r.json();
+  if(d.error) throw new Error(d.error);
+  if(!Array.isArray(d) || !d.length) throw new Error('Address not found — try simplifying (e.g. "61 Kokomo Dr, Destin FL") or use Lat/Long tab');
+  return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), display: d[0].display_name };
+}
+
+/* ─── projection engine ─── */
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const MIN_COMPS = 5;
+/* Fallback seasonality curves — used only when Market Report API data is unavailable */
+const FALLBACK_SEASON_REV = [0.65, 0.60, 0.80, 0.90, 1.10, 1.30, 1.40, 1.35, 1.15, 0.95, 0.75, 0.65];
+const FALLBACK_SEASON_OCC = [0.75, 0.70, 0.85, 0.92, 1.08, 1.20, 1.28, 1.25, 1.10, 0.98, 0.82, 0.72];
+const FALLBACK_SEASON_ADR = [0.82, 0.80, 0.88, 0.94, 1.06, 1.15, 1.18, 1.16, 1.08, 0.98, 0.88, 0.82];
+const FALLBACK_SEASON_LOS = [0.85, 0.82, 0.90, 0.95, 1.05, 1.18, 1.22, 1.20, 1.08, 0.96, 0.88, 0.85];
+/* Scenario multipliers: conservative / base / aggressive */
+const SCENARIOS = { conservative: 0.85, base: 1.0, aggressive: 1.15 };
+
+/**
+ * Fetch 12 months of daily time-series from the Wheelhouse Market Report API,
+ * aggregate into monthly averages, and return seasonality factor arrays.
+ * Each factor = month_avg / annual_avg (so they hover around 1.0).
+ * Falls back to hardcoded curves on any error.
+ */
+async function fetchMarketSeasonality(marketId, bedrooms) {
+  try {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    const fmt = d => d.toISOString().slice(0, 10);
+    let url = `/api/market-report/${marketId}/time-series?start_date=${fmt(startDate)}&end_date=${fmt(today)}`;
+    if (bedrooms != null && parseInt(bedrooms) < 4) {
+      url += `&bedrooms=${parseInt(bedrooms)}`;
+    }
+    console.log('[Seasonality] Fetching market time-series:', url);
+    const r = await fetch(url);
+    if (!r.ok) { console.warn('[Seasonality] API returned', r.status); return null; }
+    const body = await r.json();
+    const data = body.data;
+    if (!data || !data.length) { console.warn('[Seasonality] No time-series data'); return null; }
+
+    // Bucket daily data by month (0-11)
+    const buckets = Array.from({length: 12}, () => ({occ: [], adr: [], revpar: [], rev: []}));
+    for (const day of data) {
+      const m = new Date(day.stay_date).getMonth();
+      if (day.occupancy != null) buckets[m].occ.push(day.occupancy);
+      if (day.nightly_rate != null) buckets[m].adr.push(day.nightly_rate);
+      if (day.revpar != null) buckets[m].revpar.push(day.revpar);
+      if (day.revenue != null) buckets[m].rev.push(day.revenue);
+    }
+    const monthAvg = (arr) => arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : null;
+
+    // Compute monthly averages
+    const mOcc = buckets.map(b => monthAvg(b.occ));
+    const mADR = buckets.map(b => monthAvg(b.adr));
+    const mRevpar = buckets.map(b => monthAvg(b.revpar));
+    const mRev = buckets.map(b => monthAvg(b.rev));
+
+    // Compute annual averages (only from months that have data)
+    const annualAvg = (arr) => { const v = arr.filter(x => x != null); return v.length ? v.reduce((s,x)=>s+x,0)/v.length : null; };
+    const aOcc = annualAvg(mOcc);
+    const aADR = annualAvg(mADR);
+    const aRev = annualAvg(mRev);
+
+    // Compute seasonality factors (month / annual, default 1.0 if missing)
+    const toFactors = (monthly, annual) => monthly.map(v => (v != null && annual) ? v / annual : 1.0);
+    const seasonOcc = toFactors(mOcc, aOcc);
+    const seasonADR = toFactors(mADR, aADR);
+    const seasonRev = toFactors(mRev, aRev);
+
+    // Log detailed monthly breakdown
+    console.log('[Seasonality] Market Report monthly averages:');
+    console.table(MONTHS.map((m,i) => ({
+      month: m,
+      avgOcc: mOcc[i] != null ? (mOcc[i]*100).toFixed(1)+'%' : 'n/a',
+      avgADR: mADR[i] != null ? '$'+mADR[i].toFixed(0) : 'n/a',
+      avgRevenue: mRev[i] != null ? '$'+mRev[i].toFixed(0) : 'n/a',
+      occFactor: seasonOcc[i].toFixed(3),
+      adrFactor: seasonADR[i].toFixed(3),
+      revFactor: seasonRev[i].toFixed(3),
+    })));
+    console.log(`[Seasonality] Annual averages — Occ: ${(aOcc*100).toFixed(1)}%, ADR: $${aADR?.toFixed(0)}, Rev: $${aRev?.toFixed(0)}`);
+    console.log('[Seasonality] Market factors computed for market_id:', marketId);
+    return { seasonRev, seasonOcc, seasonADR, seasonLOS: FALLBACK_SEASON_LOS, source: 'market_report', marketId };
+  } catch(e) {
+    console.warn('[Seasonality] Error fetching market data:', e);
+    return null;
+  }
+}
+
+function computeProjection(comps, assumptions, seasonality) {
+  const valid = comps.filter(c => c.nrevenue_365_0 != null);
+  if (valid.length < MIN_COMPS) return null;
+  const avg = (a,k)=>{const v=a.filter(x=>x[k]!=null).map(x=>x[k]);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;};
+  const med = (a,k)=>{const v=a.filter(x=>x[k]!=null).map(x=>x[k]).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length/2)]:null;};
+  const pct = (a,k,p)=>{const v=a.filter(x=>x[k]!=null).map(x=>x[k]).sort((a,b)=>a-b);return v.length>3?v[Math.floor(v.length*p)]:v.length?v[p<0.5?0:v.length-1]:null;};
+
+  // Use market-specific seasonality if available, else fall back to generic curves
+  const SEASON_REV = seasonality ? seasonality.seasonRev : FALLBACK_SEASON_REV;
+  const SEASON_OCC = seasonality ? seasonality.seasonOcc : FALLBACK_SEASON_OCC;
+  const SEASON_ADR = seasonality ? seasonality.seasonADR : FALLBACK_SEASON_ADR;
+  const SEASON_LOS = seasonality ? seasonality.seasonLOS : FALLBACK_SEASON_LOS;
+  const seasonSource = seasonality ? seasonality.source : 'fallback';
+
+  const medRevenue = med(valid,'nrevenue_365_0');
+  const medOcc = med(valid,'occupancy_365_0');
+  const medADR = med(valid,'anr_365_0');
+  const medLOS = med(valid,'los_365_0');
+
+  // Comp names list (for display — no individual data)
+  const compNames = valid.map(c => c.title || `Listing ${c.listing_id}`);
+
+  // Monthly metrics for each scenario
+  const monthly = {};
+  Object.entries(SCENARIOS).forEach(([name, mult]) => {
+    const annualRev = medRevenue * mult;
+    const annualOcc = medOcc ? Math.min(medOcc * mult, 1.0) : null;
+    const annualADR = medADR ? medADR * mult : null;
+    const annualLOS = medLOS ? medLOS * mult : null;
+    monthly[name] = MONTHS.map((m, i) => {
+      const occ = annualOcc != null ? Math.min(annualOcc * SEASON_OCC[i], 1.0) : null;
+      const occupiedNights = occ != null ? Math.round(DAYS_IN_MONTH[i] * occ) : null;
+      return {
+        month: m,
+        revenue: Math.round(annualRev * SEASON_REV[i] / 12),
+        occupancy: occ,
+        adr: annualADR != null ? Math.round(annualADR * SEASON_ADR[i]) : null,
+        los: annualLOS != null ? +(annualLOS * SEASON_LOS[i]).toFixed(1) : null,
+        occupiedNights,
+      };
+    });
+    monthly[name].annual = Math.round(annualRev);
+    monthly[name].avgOcc = annualOcc;
+    monthly[name].avgADR = annualADR != null ? Math.round(annualADR) : null;
+    monthly[name].avgLOS = annualLOS != null ? +annualLOS.toFixed(1) : null;
+  });
+
+  return {
+    compCount: valid.length, compNames, seasonSource,
+    seasonFactors: { SEASON_REV, SEASON_OCC, SEASON_ADR, SEASON_LOS },
+    avgRevenue: avg(valid,'nrevenue_365_0'), medRevenue, p25Revenue: pct(valid,'nrevenue_365_0',0.25), p75Revenue: pct(valid,'nrevenue_365_0',0.75),
+    avgOcc: avg(valid,'occupancy_365_0'), medOcc, avgADR: avg(valid,'anr_365_0'), medADR, avgRevPAR: avg(valid,'nrevpar_365_0'),
+    avgLOS: avg(valid,'los_365_0'), medLOS, avgLeadTime: avg(valid,'lead_time_365_0'), avgRating: avg(valid,'star_rating'),
+    avgReviews: avg(valid,'review_count'), avgCleaningFee: avg(valid,'cleaning_fee'),
+    monthly,
+  };
+}
+
+/* ─── revenue heatmap color ─── */
+function revColor(rev, mn, mx) {
+  if(rev==null||mn==null||mx==null||mx===mn) return 'var(--accent)';
+  const t = Math.max(0, Math.min(1, (rev-mn)/(mx-mn)));
+  return `hsl(${t*120}, 70%, 45%)`;
+}
+
+/* ═══════════ UI COMPONENTS ═══════════ */
+
+/* ─ Sidebar Status Counter (like WH left sidebar) ─ */
+const StatusBar = ({ inSet, inView, compare, hidden }) => (
+  <div style={{ display:'flex', flexDirection:'column', gap:2, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'8px 6px', width:52 }}>
+    {[
+      { n: inSet, label: 'IN SET', color: 'var(--accent)' },
+      { n: inView, label: 'IN VIEW', color: 'var(--blue)' },
+      { n: compare, label: 'COMPARE', color: 'var(--green)' },
+      { n: hidden, label: 'HIDDEN', color: 'var(--text-muted)' },
+    ].map(s => (
+      <div key={s.label} style={{ textAlign:'center', padding:'6px 0', borderBottom:'1px solid var(--border-light)' }}>
+        <div style={{ fontSize:16, fontWeight:700, color: s.color }}>{s.n}</div>
+        <div style={{ fontSize:8, color:'var(--text-muted)', letterSpacing:'0.06em', fontWeight:600 }}>{s.label}</div>
+      </div>
+    ))}
+  </div>
+);
+
+/* ─ Widgets Panel (column visibility toggles, matches WH) ─ */
+const WidgetsPanel = ({ visible, setVisible, onClose }) => (
+  <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:0, width:260, maxHeight:'70vh', display:'flex', flexDirection:'column', boxShadow:'0 8px 30px rgba(0,0,0,0.08)' }}>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 16px', borderBottom:'1px solid var(--border)' }}>
+      <span style={{ fontWeight:700, fontSize:15 }}>Widgets</span>
+      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+        <button onClick={()=>setVisible(new Set(DEFAULT_VISIBLE))} style={{ background:'none', border:'1px solid var(--border)', borderRadius:6, padding:'4px 10px', fontSize:12, cursor:'pointer', color:'var(--text-sec)' }}>Reset</button>
+        <button onClick={onClose} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'var(--text-sec)', lineHeight:1 }}>×</button>
+      </div>
+    </div>
+    <div style={{ overflowY:'auto', flex:1 }}>
+      {ALL_COLUMNS.filter(c=>!c.always).map(col => (
+        <div key={col.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid var(--border-light)', cursor:'pointer' }}
+          onClick={()=>setVisible(prev=>{const n=new Set(prev);n.has(col.key)?n.delete(col.key):n.add(col.key);return n;})}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ color:'var(--text-muted)', fontSize:14, cursor:'grab' }}>⋮⋮</span>
+            <span style={{ fontSize:13, fontWeight:500 }}>{col.label}</span>
+          </div>
+          <span style={{ fontSize:16, color: visible.has(col.key) ? 'var(--accent)' : 'var(--text-muted)', opacity: visible.has(col.key) ? 1 : 0.4 }}>
+            {visible.has(col.key) ? '👁' : '👁'}
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/* ─ Filters Panel (expandable sections, matches WH) ─ */
+const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities, setAmenities, availableAmenities, onApply, onClear, totalCount, filteredCount }) => {
+  const [expanded, setExpanded] = useState({ bedrooms: true, bathrooms: true, sleeps: false, performance: true, reputation: false, roomTypes: false, amenities: false });
+  const toggle = k => setExpanded(p=>({...p,[k]:!p[k]}));
+  const [amenitySearch, setAmenitySearch] = useState('');
+
+  const activeCount = [filters.minBed, filters.maxBed, filters.minBath, filters.maxBath, filters.minSleeps, filters.maxSleeps, filters.minRevenue, filters.minOcc, filters.minRating, filters.minReviews].filter(Boolean).length + (roomTypes.length ? 1 : 0) + (amenities.length ? 1 : 0);
+
+  const Section = ({ id, label, children, badge }) => (
+    <div style={{ borderBottom:'1px solid var(--border-light)' }}>
+      <div onClick={()=>toggle(id)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', cursor:'pointer' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontSize:13, fontWeight:600 }}>{label}</span>
+          {badge && <span style={{ fontSize:10, fontWeight:700, background:'var(--accent)', color:'#fff', borderRadius:8, padding:'1px 6px' }}>{badge}</span>}
+        </div>
+        <span style={{ fontSize:12, color:'var(--text-muted)', transition:'transform .2s', transform: expanded[id] ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+      </div>
+      {expanded[id] && <div style={{ padding:'0 16px 14px' }}>{children}</div>}
+    </div>
+  );
+
+  const fi = { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 8px', fontSize:13, color:'var(--text)', width:'100%', outline:'none' };
+  const NumInput = ({ label, value, field, step, placeholder }) => (
+    <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+      <label style={{ fontSize:11, color:'var(--text-muted)' }}>{label}</label>
+      <input type="number" step={step||1} value={value||''} placeholder={placeholder||''} onChange={e=>setFilters(p=>({...p,[field]:e.target.value}))} style={fi} />
+    </div>
+  );
+
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, width:250, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'calc(100vh - 120px)', flexShrink:0 }}>
+      <div style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontWeight:700, fontSize:15 }}>Filters</span>
+          {activeCount > 0 && <span style={{ fontSize:11, background:'var(--accent-bg)', color:'var(--accent)', padding:'2px 8px', borderRadius:4, fontWeight:600 }}>{activeCount} active</span>}
+        </div>
+        {totalCount != null && (
+          <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>
+            Showing {filteredCount} of {totalCount} listings
+          </div>
+        )}
+      </div>
+
+      <div style={{ overflowY:'auto', flex:1 }}>
+        <Section id="bedrooms" label="Bedrooms" badge={filters.minBed||filters.maxBed ? '!' : null}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <NumInput label="Min" value={filters.minBed} field="minBed" placeholder="Any" />
+            <NumInput label="Max" value={filters.maxBed} field="maxBed" placeholder="Any" />
+          </div>
+        </Section>
+
+        <Section id="bathrooms" label="Bathrooms" badge={filters.minBath||filters.maxBath ? '!' : null}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <NumInput label="Min" value={filters.minBath} field="minBath" step="0.5" placeholder="Any" />
+            <NumInput label="Max" value={filters.maxBath} field="maxBath" step="0.5" placeholder="Any" />
+          </div>
+        </Section>
+
+        <Section id="sleeps" label="Sleeps" badge={filters.minSleeps||filters.maxSleeps ? '!' : null}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <NumInput label="Min" value={filters.minSleeps} field="minSleeps" placeholder="Any" />
+            <NumInput label="Max" value={filters.maxSleeps} field="maxSleeps" placeholder="Any" />
+          </div>
+        </Section>
+
+        <Section id="performance" label="Performance" badge={filters.minRevenue||filters.minOcc ? '!' : null}>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <NumInput label="Min Annual Revenue ($)" value={filters.minRevenue} field="minRevenue" placeholder="e.g. 30000" />
+            <NumInput label="Min Occupancy (%)" value={filters.minOcc} field="minOcc" step="0.01" placeholder="e.g. 50" />
+            <NumInput label="Min Total ADR ($)" value={filters.minADR} field="minADR" placeholder="e.g. 100" />
+          </div>
+        </Section>
+
+        <Section id="reputation" label="Reputation" badge={filters.minRating||filters.minReviews ? '!' : null}>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <NumInput label="Min Rating" value={filters.minRating} field="minRating" step="0.1" placeholder="e.g. 4.5" />
+            <NumInput label="Min Reviews" value={filters.minReviews} field="minReviews" placeholder="e.g. 10" />
+          </div>
+        </Section>
+
+        <Section id="roomTypes" label="Room Types" badge={roomTypes.length ? roomTypes.length : null}>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+            {ROOM_TYPES.map(rt=>{
+              const sel = roomTypes.includes(rt);
+              return <button key={rt} onClick={()=>setRoomTypes(p=>sel?p.filter(x=>x!==rt):[...p,rt])}
+                style={{ background:sel?'var(--accent)':'var(--surface2)', border:sel?'none':'1px solid var(--border)', borderRadius:5, padding:'3px 8px', color:sel?'#fff':'var(--text)', fontSize:11, cursor:'pointer' }}>{rt}</button>;
+            })}
+          </div>
+        </Section>
+
+        <Section id="amenities" label="Amenities" badge={amenities.length ? amenities.length : null}>
+          {(() => {
+            const fmt = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            return (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                <input type="text" placeholder="Search amenities..." value={amenitySearch} onChange={e=>setAmenitySearch(e.target.value)}
+                  style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px', fontSize:12, color:'var(--text)', outline:'none', marginBottom:2 }} />
+                {amenities.length > 0 && (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:4, paddingBottom:6, borderBottom:'1px solid var(--border-light)' }}>
+                    {amenities.map(a=>(
+                      <button key={a} onClick={()=>setAmenities(p=>p.filter(x=>x!==a))}
+                        style={{ background:'var(--accent)', border:'none', borderRadius:5, padding:'3px 8px', color:'#fff', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', gap:3 }}>{fmt(a)} ×</button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display:'flex', flexWrap:'wrap', gap:4, maxHeight:200, overflowY:'auto' }}>
+                  {(availableAmenities || [])
+                    .filter(a => !amenities.includes(a))
+                    .filter(a => !amenitySearch || fmt(a).toLowerCase().includes(amenitySearch.toLowerCase()))
+                    .map(a=>(
+                      <button key={a} onClick={()=>setAmenities(p=>[...p,a])}
+                        style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:5, padding:'3px 8px', color:'var(--text)', fontSize:11, cursor:'pointer' }}>{fmt(a)}</button>
+                    ))}
+                  {availableAmenities && availableAmenities.length === 0 && (
+                    <div style={{ fontSize:11, color:'var(--text-muted)', fontStyle:'italic' }}>No amenity data available</div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </Section>
+      </div>
+
+      <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', gap:8 }}>
+        <button onClick={onClear} style={{ flex:1, padding:'8px', border:'1px solid var(--border)', borderRadius:8, background:'var(--surface)', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--text-sec)' }}>Clear All</button>
+        <button onClick={onApply} style={{ flex:1, padding:'8px', border:'none', borderRadius:8, background:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:600, color:'#fff' }}>Re-search</button>
+      </div>
+    </div>
+  );
+};
+
+/* ─ Compact StatCard ─ */
+const Stat = ({ label, value, sub, color }) => (
+  <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 18px', flex:'1 1 155px', minWidth:155 }}>
+    <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:3, textTransform:'uppercase', letterSpacing:'0.04em', fontWeight:600 }}>{label}</div>
+    <div style={{ fontSize:22, fontWeight:700, color: color || 'var(--text)' }}>{value}</div>
+    {sub && <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2 }}>{sub}</div>}
+  </div>
+);
+
+/* ─ Leaflet Map ─ */
+const CompMap = ({ comps, selected, onToggle, centerLat, centerLng, searchRadius }) => {
+  const mapRef = useRef(null);
+  const mapInst = useRef(null);
+  const markers = useRef([]);
+  const revs = comps.filter(c=>c.nrevenue_365_0!=null).map(c=>c.nrevenue_365_0);
+  const mn = revs.length ? Math.min(...revs) : 0;
+  const mx = revs.length ? Math.max(...revs) : 1;
+
+  useEffect(() => {
+    if(!mapRef.current || mapInst.current) return;
+    const m = L.map(mapRef.current, {zoomControl:true}).setView([centerLat||37.7749, centerLng||-122.4452], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; OSM &copy; CARTO', maxZoom:19 }).addTo(m);
+    mapInst.current = m;
+    return ()=>{m.remove();mapInst.current=null;};
+  }, []);
+
+  useEffect(()=>{
+    const m = mapInst.current; if(!m) return;
+    if(centerLat && centerLng) m.setView([centerLat, centerLng], 14);
+  }, [centerLat, centerLng]);
+
+  useEffect(()=>{
+    const m = mapInst.current; if(!m) return;
+    markers.current.forEach(mk=>m.removeLayer(mk));
+    markers.current = [];
+
+    // Subject property
+    if(centerLat && centerLng){
+      const si = L.divIcon({ html:`<div style="width:16px;height:16px;background:var(--accent);border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--accent),0 2px 8px rgba(0,0,0,0.2);"></div>`, iconSize:[16,16], iconAnchor:[8,8], className:'' });
+      const sm = L.marker([centerLat,centerLng],{icon:si}).addTo(m);
+      sm.bindPopup(`<b style="color:var(--accent)">Subject Property</b>`);
+      markers.current.push(sm);
+      // Radius
+      const c = L.circle([centerLat,centerLng],{radius:searchRadius||5000, color:'rgba(192,38,211,0.25)', fillColor:'rgba(192,38,211,0.04)', fillOpacity:0.4, weight:1, dashArray:'6 4'}).addTo(m);
+      markers.current.push(c);
+    }
+
+    // Comp dots (simple dark dots like WH)
+    comps.forEach(comp=>{
+      if(!comp.lat||!comp.long) return;
+      const isSel = selected.has(comp.listing_id);
+      const sz = isSel ? 10 : 7;
+      const icon = L.divIcon({
+        html:`<div style="width:${sz}px;height:${sz}px;background:${isSel?'var(--accent)':'#333'};border-radius:50%;border:${isSel?'2px solid #fff':'1.5px solid rgba(255,255,255,0.6)'};box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;"></div>`,
+        iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:''
+      });
+      const mk = L.marker([comp.lat,comp.long],{icon}).addTo(m);
+      const distKm = comp.distance_meters != null ? (comp.distance_meters / 1000).toFixed(1) : '—';
+      const occPct = comp.occupancy_365_0 != null ? (comp.occupancy_365_0 * 100).toFixed(0) : null;
+      const openOccPct = comp.open_occupancy_365_0 != null ? (comp.open_occupancy_365_0 * 100).toFixed(0) : null;
+      const openPct = comp.openness_365_0 != null ? (comp.openness_365_0 * 100).toFixed(0) : null;
+      const statusColor = comp.status === 'active' ? '#16a34a' : comp.status === 'review' ? '#d97706' : '#999';
+      const statusBg = comp.status === 'active' ? '#f0fdf4' : comp.status === 'review' ? '#fffbeb' : '#f5f5f7';
+      const thumbHtml = comp.thumb_url ? `<img class="popup-thumb" src="${comp.thumb_url}" />` : `<div class="popup-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px;">🏠</div>`;
+
+      mk.bindPopup(`
+        <div class="popup-card">
+          <div class="popup-header">
+            ${thumbHtml}
+            <div style="flex:1;min-width:0">
+              <div class="popup-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${comp.title || 'Listing ' + comp.listing_id}</div>
+              <div class="popup-subtitle">${comp.property_type || '—'} · ${comp.room_type || '—'} · ${distKm}km away</div>
+              <div style="margin-top:4px">
+                <span class="popup-badge" style="background:${statusBg};color:${statusColor}">${comp.status || 'unknown'}</span>
+                ${comp.source ? `<span class="popup-badge" style="background:#f0f0f2;color:#6e6e73;margin-left:3px">${comp.source}</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="popup-highlight">
+            <div class="popup-highlight-row">
+              <span class="popup-highlight-label">Annual Revenue (365d)</span>
+              <span class="popup-highlight-value">${fmtUSD(comp.nrevenue_365_0)}</span>
+            </div>
+          </div>
+
+          <hr class="popup-divider" />
+          <div class="popup-section-label">Property Details</div>
+          <div class="popup-grid">
+            <div class="popup-grid-row"><span class="popup-grid-label">Bedrooms</span><span class="popup-grid-value">${comp.bedrooms ?? '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Bathrooms</span><span class="popup-grid-value">${comp.bathrooms ?? '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Sleeps</span><span class="popup-grid-value">${comp.sleeps ?? '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Beds</span><span class="popup-grid-value">${comp.beds ?? '—'}</span></div>
+          </div>
+
+          <hr class="popup-divider" />
+          <div class="popup-section-label">Performance (365d)</div>
+          <div class="popup-grid">
+            <div class="popup-grid-row"><span class="popup-grid-label">Total ADR</span><span class="popup-grid-value">${fmtUSD(comp.anr_365_0)}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Total RevPAR</span><span class="popup-grid-value">${fmtUSD(comp.nrevpar_365_0)}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Occupancy</span><span class="popup-grid-value">${occPct != null ? occPct + '%' : '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Open Occ.</span><span class="popup-grid-value">${openOccPct != null ? openOccPct + '%' : '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Openness</span><span class="popup-grid-value">${openPct != null ? openPct + '%' : '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Cleaning Fee</span><span class="popup-grid-value">${fmtUSD(comp.cleaning_fee)}</span></div>
+          </div>
+
+          <hr class="popup-divider" />
+          <div class="popup-section-label">Booking Metrics (365d)</div>
+          <div class="popup-grid">
+            <div class="popup-grid-row"><span class="popup-grid-label">Avg LOS</span><span class="popup-grid-value">${comp.los_365_0 != null ? comp.los_365_0.toFixed(1) + ' nights' : '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Lead Time</span><span class="popup-grid-value">${comp.lead_time_365_0 != null ? Math.round(comp.lead_time_365_0) + ' days' : '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Booked</span><span class="popup-grid-value">${comp.booked_nights_365_0 ?? '—'} nights</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Available</span><span class="popup-grid-value">${comp.available_nights_365_0 ?? '—'} nights</span></div>
+          </div>
+
+          <hr class="popup-divider" />
+          <div class="popup-section-label">Reputation</div>
+          <div class="popup-grid">
+            <div class="popup-grid-row"><span class="popup-grid-label">Rating</span><span class="popup-grid-value">${comp.star_rating != null ? '⭐ ' + comp.star_rating.toFixed(2) : '—'}</span></div>
+            <div class="popup-grid-row"><span class="popup-grid-label">Reviews</span><span class="popup-grid-value">${comp.review_count ?? '—'}</span></div>
+          </div>
+
+          ${comp.url ? `<a href="${comp.url}" target="_blank" class="popup-link">View Listing ↗</a>` : ''}
+
+          <div class="popup-btn-row">
+            <div class="popup-btn ${isSel ? '' : 'popup-btn-primary'}" onclick="document.dispatchEvent(new CustomEvent('toggle-comp',{detail:${comp.listing_id}}))">${isSel ? 'Remove from Set' : 'Add to Set'}</div>
+          </div>
+        </div>
+      `, { maxWidth: 340, minWidth: 300, className: '' });
+      markers.current.push(mk);
+    });
+
+    if(comps.length){
+      const vc=comps.filter(c=>c.lat&&c.long);
+      if(vc.length){const b=L.latLngBounds(vc.map(c=>[c.lat,c.long]));if(centerLat&&centerLng)b.extend([centerLat,centerLng]);m.fitBounds(b,{padding:[40,40]});}
+    }
+
+    // Listen for toggle events from popup buttons
+    const handler = (e) => onToggle(e.detail);
+    document.addEventListener('toggle-comp', handler);
+    return () => document.removeEventListener('toggle-comp', handler);
+  }, [comps, selected, centerLat, centerLng, searchRadius]);
+
+  return <div ref={mapRef} style={{ width:'100%', height:'100%', borderRadius:10, minHeight:420 }} />;
+};
+
+/* ─ Comp Table ─ */
+const CompTable = ({ comps, selected, onToggle, visibleCols }) => {
+  const [sortKey, setSortKey] = useState('nrevenue_365_0');
+  const [sortDir, setSortDir] = useState(-1);
+  const sorted = useMemo(()=>[...comps].sort((a,b)=>((a[sortKey]??-Infinity)-(b[sortKey]??-Infinity))*sortDir),[comps,sortKey,sortDir]);
+  const cols = ALL_COLUMNS.filter(c=>c.always||visibleCols.has(c.key));
+
+  const th = { padding:'8px 8px', textAlign:'left', fontSize:11, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--text-muted)', cursor:'pointer', userSelect:'none', borderBottom:'2px solid var(--border)', whiteSpace:'nowrap', fontWeight:600, background:'var(--surface)' };
+  const td = { padding:'9px 8px', fontSize:13, borderBottom:'1px solid var(--border-light)', whiteSpace:'nowrap' };
+
+  const cellVal = (comp, col) => {
+    if(col.key==='title') return (
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        {comp.thumb_url && <img src={comp.thumb_url} style={{width:28,height:28,borderRadius:5,objectFit:'cover'}} />}
+        <div>
+          <div style={{fontWeight:500,fontSize:13}}>{comp.title||`Listing ${comp.listing_id}`}</div>
+          <div style={{fontSize:10,color:'var(--text-muted)'}}>{comp.property_type}</div>
+        </div>
+      </div>
+    );
+    const v = comp[col.key];
+    if(col.fmt) return col.fmt(v);
+    if(col.key==='star_rating') return v!=null ? v.toFixed(1) : '—';
+    return v != null ? fmt(v) : '—';
+  };
+
+  return (
+    <div style={{ overflowX:'auto', maxHeight:440, overflowY:'auto' }}>
+      <table style={{ width:'100%', borderCollapse:'collapse' }}>
+        <thead style={{ position:'sticky', top:0, zIndex:2 }}>
+          <tr>
+            <th style={{...th, width:36}}><input type="checkbox" checked={comps.length>0&&comps.every(c=>selected.has(c.listing_id))} onChange={()=>{comps.every(c=>selected.has(c.listing_id))?onToggle('__none'):onToggle('__all')}} style={{accentColor:'var(--accent)'}}/></th>
+            {cols.map(c=><th key={c.key} style={{...th,width:c.w}} onClick={()=>{if(sortKey===c.key)setSortDir(d=>d*-1);else{setSortKey(c.key);setSortDir(-1);}}}>{c.label}{sortKey===c.key?(sortDir===1?' ↑':' ↓'):''}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((comp,i)=>{
+            const isSel = selected.has(comp.listing_id);
+            return (
+              <tr key={comp.listing_id||i} style={{background:isSel?'var(--accent-bg)':'transparent'}} onMouseEnter={e=>e.currentTarget.style.background=isSel?'var(--accent-bg)':'var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background=isSel?'var(--accent-bg)':'transparent'}>
+                <td style={td}><input type="checkbox" checked={isSel} onChange={()=>onToggle(comp.listing_id)} style={{accentColor:'var(--accent)'}}/></td>
+                {cols.map(c=><td key={c.key} style={{...td, ...(c.key==='nrevenue_365_0'?{fontWeight:600,color:'var(--green)'}:{})}}>{cellVal(comp,c)}</td>)}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {!sorted.length && <div style={{padding:40,textAlign:'center',color:'var(--text-muted)'}}>No listings found.</div>}
+    </div>
+  );
+};
+
+/* ─ Bar Chart ─ */
+const BarChart = ({ data, label, valueKey, formatFn=fmtUSD, color='var(--accent)' }) => {
+  const max = Math.max(...data.map(d=>d[valueKey]||0),1);
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:5}}>
+      <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{label}</div>
+      {data.slice(0,12).map((d,i)=>(
+        <div key={i} style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:90,fontSize:11,color:'var(--text-muted)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flexShrink:0}}>{d.title||`#${d.listing_id}`}</div>
+          <div style={{flex:1,height:18,background:'var(--surface2)',borderRadius:4,overflow:'hidden'}}>
+            <div style={{width:`${((d[valueKey]||0)/max)*100}%`,height:'100%',background:color,borderRadius:4,transition:'width .3s'}}/>
+          </div>
+          <div style={{width:65,fontSize:12,textAlign:'right',flexShrink:0,fontWeight:500}}>{formatFn(d[valueKey])}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ─── Wheelhouse Wordmark Base64 Images ─── */
+const WH_WORDMARK_DARK = 'data:image/png;base64,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';
+const WH_WORDMARK_WHITE = 'data:image/png;base64,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';
+
+/* ─── PDF Generation ─── */
+async function generatePDF(type, projection, assumptions, comps, ownerInfo, pmCompany, extras) {
+  const pm = pmCompany || {};
+  const { salesRepName, salesRepPhotoData, brandColor, companyLogoData, brandImageData, propertyImageData, companyBlurb, diffBlurb, salesRepCommentary, selectedComps, companyName } = extras || {};
+
+  const { SEASON_REV, SEASON_OCC, SEASON_ADR, SEASON_LOS } = (projection && projection.seasonFactors) || {
+    SEASON_REV: FALLBACK_SEASON_REV, SEASON_OCC: FALLBACK_SEASON_OCC,
+    SEASON_ADR: FALLBACK_SEASON_ADR, SEASON_LOS: FALLBACK_SEASON_LOS
+  };
+
+  const accentHex = brandColor || '#1a365d';
+  const compName = (companyName || pm.name || 'Property Manager');
+
+  const _pn = parseFloat(pm.perNightFee) || 0;
+  const _ps = parseFloat(pm.perStayFee) || 0;
+  const _pp = parseFloat(pm.pctFee) || 0;
+
+  const _pdfComputeRentalMonthly = (annualGross, scenarioMult) => {
+    if (!projection) return { rental: annualGross, fees: 0, monthly: [] };
+    const mult = scenarioMult || 1.0;
+    const medOcc = projection.medOcc || 0, medLOS = projection.medLOS || 1;
+    let totalFees = 0;
+    const monthlyData = [];
+    MONTHS.forEach((m, i) => {
+      const grossRev = annualGross * mult * SEASON_REV[i] / 12;
+      const occ = Math.min(medOcc * SEASON_OCC[i], 1.0);
+      const occN = Math.round(DAYS_IN_MONTH[i] * occ);
+      const los = medLOS * SEASON_LOS[i];
+      const stays = los > 0 ? occN / los : 0;
+      const nightFees = occN * _pn;
+      const stayFees = stays * _ps;
+      const revFees = grossRev * (_pp / 100);
+      const mFees = nightFees + stayFees + revFees;
+      totalFees += mFees;
+      monthlyData.push({ month: MONTHS[i], grossRev, occN, occ, los, stays, nightFees, stayFees, revFees, totalFees: mFees, rental: grossRev - mFees });
+    });
+    return { rental: annualGross * mult - totalFees, fees: totalFees, monthly: monthlyData };
+  };
+
+  const _scenarioRentals = {};
+  ['conservative','base','aggressive'].forEach(key => {
+    const mult = key === 'conservative' ? 0.85 : key === 'aggressive' ? 1.15 : 1.0;
+    _scenarioRentals[key] = _pdfComputeRentalMonthly(projection?.medRevenue || 0, mult);
+  });
+
+  const _pdfRentalRev = _scenarioRentals.base.rental;
+  const _pdfOccNights = projection && projection.medOcc ? DAYS_IN_MONTH.reduce((s, d, i) => s + Math.round(d * Math.min(projection.medOcc * SEASON_OCC[i], 1.0)), 0) : 0;
+  const _pdfP25Rental = _pdfComputeRentalMonthly(projection?.p25Revenue || 0, 1.0).rental;
+  const _pdfP75Rental = _pdfComputeRentalMonthly(projection?.p75Revenue || 0, 1.0).rental;
+
+  const dateStr = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+  const propAddr = ownerInfo.property_address || 'Property';
+
+  let compToShow = comps;
+  if (selectedComps && selectedComps.length > 0) {
+    const selectedSet = new Set(selectedComps.map(String));
+    compToShow = comps.filter(c => selectedSet.has(String(c.comp_id || c.id)));
+  }
+  compToShow = compToShow.slice(0, 5);
+
+  const _monthlyRentals = {};
+  ['conservative','base','aggressive'].forEach(key => {
+    _monthlyRentals[key] = _scenarioRentals[key].monthly.map(m => Math.round(m.rental));
+  });
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1d1d1f; background: #fff; width: 8.5in; margin: 0 auto; }
+    .page { width: 8.5in; height: 11in; page-break-after: always; overflow: hidden; position: relative; }
+    .page:last-child { page-break-after: avoid; }
+
+    /* PAGE 1: COVER */
+    .cover { background: #fff; padding: 0; }
+    .cover-header { background: ${accentHex}; color: white; padding: 20px 18mm; display: flex; align-items: center; gap: 15px; margin-bottom: 30px; }
+    .cover-header img { height: 35px; width: auto; }
+    .cover-header h1 { font-size: 22px; font-weight: 700; }
+    .cover-hero { margin: 0 18mm 30px; width: calc(100% - 36mm); max-height: 200px; }
+    .cover-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-body { padding: 0 18mm; }
+    .cover-title { font-size: 14px; font-weight: 700; color: ${accentHex}; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .cover-address { font-size: 28px; font-weight: 700; color: #1d1d1f; margin-bottom: 15px; line-height: 1.2; }
+    .cover-divider { border-top: 1px solid ${accentHex}; margin: 12px 0; }
+    .cover-prepared { font-size: 9px; color: #6e6e73; margin-top: 12px; }
+    .cover-owner-name { font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 4px 0 8px; }
+    .cover-date { font-size: 10px; color: #6e6e73; margin-bottom: 16px; }
+    .cover-blurb { font-size: 9px; color: #6e6e73; line-height: 1.5; margin-bottom: 20px; }
+    .cover-rep { font-size: 10px; color: #1d1d1f; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .cover-rep img { height: 20px; width: 20px; border-radius: 4px; }
+    .cover-rep-name { font-weight: 700; }
+    .cover-footer { border-top: 1px solid ${accentHex}; padding-top: 12px; font-size: 8px; color: #6e6e73; text-align: center; margin-top: 30px; }
+
+    /* PAGE 2: SUMMARY */
+    .summary { background: #fff; }
+    .page-header { background: ${accentHex}; color: white; padding: 12px 18mm; font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .page-body { padding: 0 18mm 18mm; }
+    .prop-image { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; }
+    .section-title { font-size: 12px; font-weight: 700; color: #1d1d1f; margin: 16px 0 12px; }
+    .revenue-boxes { display: flex; gap: 8px; margin-bottom: 20px; }
+    .revenue-box { flex: 1; border: 1px solid #e5e5ea; border-radius: 8px; padding: 16px; text-align: center; }
+    .revenue-box.conservative { border-top: 3px solid #d97706; background: #fffaf0; }
+    .revenue-box.base { border-top: 3px solid #16a34a; background: #f5faf5; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .revenue-box.aggressive { border-top: 3px solid ${accentHex}; background: #f5f8fc; }
+    .revenue-box-label { font-size: 9px; color: #6e6e73; font-weight: 600; margin-bottom: 8px; }
+    .revenue-box-value { font-size: 18px; font-weight: 700; }
+    .revenue-box.conservative .revenue-box-value { color: #d97706; }
+    .revenue-box.base .revenue-box-value { color: #16a34a; }
+    .revenue-box.aggressive .revenue-box-value { color: ${accentHex}; }
+    .blurb-text { font-size: 9px; color: #6e6e73; line-height: 1.5; margin-bottom: 12px; }
+    .disclaimer { font-size: 7px; color: #999; line-height: 1.4; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e5ea; }
+
+    /* PAGE 3: MONTHLY */
+    .monthly-tables { padding: 0 18mm 18mm; }
+    .table-title { font-size: 11px; font-weight: 700; color: ${accentHex}; margin: 14px 0 8px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 8px; margin-bottom: 16px; }
+    .data-table thead { background: #f5f5f7; }
+    .data-table th { padding: 6px; text-align: center; font-weight: 700; color: ${accentHex}; border: 1px solid #e5e5ea; }
+    .data-table td { padding: 4px 6px; text-align: center; border: 1px solid #e5e5ea; }
+    .data-table tr:nth-child(odd) { background: #fff; }
+    .data-table tr:nth-child(even) { background: #f8f8fa; }
+    .data-table .scenario-label { text-align: left; font-weight: 600; color: #1d1d1f; }
+    .data-table .conservative { color: #d97706; font-weight: 600; }
+    .data-table .base { color: #16a34a; font-weight: 600; }
+    .data-table .aggressive { color: ${accentHex}; font-weight: 600; }
+
+    /* PAGE 4: COMPS */
+    .comps-body { padding: 0 18mm 18mm; }
+    .comps-table { width: 100%; border-collapse: collapse; font-size: 7px; }
+    .comps-table thead { background: #f8f8fa; }
+    .comps-table th { padding: 6px; text-align: left; font-weight: 700; color: #6e6e73; border-bottom: 1px solid #e5e5ea; }
+    .comps-table td { padding: 6px; border-bottom: 1px solid #e5e5ea; color: #1d1d1f; }
+    .comps-table .comp-name { font-weight: 600; }
+    .comps-table tr:nth-child(even) { background: #f8f8fa; }
+  </style>
+</head>
+<body>
+
+<!-- PAGE 1: COVER -->
+<div class="page cover">
+  <div class="cover-header">
+    ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : ''}
+    <h1>${compName}</h1>
+  </div>
+  ${brandImageData ? `<img src="${brandImageData}" class="cover-hero" alt="Brand Image" onerror="this.style.display='none'">` : ''}
+  <div class="cover-body">
+    <div class="cover-title">REVENUE PROJECTION</div>
+    <div class="cover-divider"></div>
+    <div class="cover-address">${propAddr}</div>
+    <div class="cover-prepared">Prepared for</div>
+    <div class="cover-owner-name">${ownerInfo.owner_name || 'Owner'}</div>
+    <div class="cover-date">${dateStr}</div>
+    ${companyBlurb ? `<div class="cover-blurb">${companyBlurb}</div>` : ''}
+    ${salesRepName ? `<div class="cover-rep">
+      ${salesRepPhotoData ? `<img src="${salesRepPhotoData}" alt="Rep" onerror="this.style.display='none'">` : ''}
+      <div class="cover-rep-name">${salesRepName}</div>
+    </div>` : ''}
+    <div class="cover-footer">Powered by Wheelhouse</div>
+  </div>
+</div>
+
+<!-- PAGE 2: SUMMARY -->
+<div class="page summary">
+  <div class="page-header">Property Summary</div>
+  <div class="page-body">
+    ${propertyImageData ? `<img src="${propertyImageData}" class="prop-image" alt="Property" onerror="this.style.display='none'">` : ''}
+    <div class="section-title">Annual Revenue Projection</div>
+    <div class="revenue-boxes">
+      <div class="revenue-box conservative">
+        <div class="revenue-box-label">Conservative</div>
+        <div class="revenue-box-value">${fmtUSD(Math.round(_pdfP25Rental))}</div>
+      </div>
+      <div class="revenue-box base">
+        <div class="revenue-box-label">Base Case</div>
+        <div class="revenue-box-value">${fmtUSD(Math.round(_pdfRentalRev))}</div>
+      </div>
+      <div class="revenue-box aggressive">
+        <div class="revenue-box-label">Aggressive</div>
+        <div class="revenue-box-value">${fmtUSD(Math.round(_pdfP75Rental))}</div>
+      </div>
+    </div>
+    ${diffBlurb ? `
+      <div class="section-title">Our Approach</div>
+      <div class="blurb-text">${diffBlurb}</div>
+    ` : ''}
+    ${salesRepCommentary ? `
+      <div class="section-title">Additional Notes</div>
+      <div class="blurb-text">${salesRepCommentary}</div>
+    ` : ''}
+    <div class="disclaimer">
+      This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only and do not include additional fees, housekeeping, administrative costs, taxes, etc. Revenue is not guaranteed. Market conditions and individual property performance may vary.
+    </div>
+  </div>
+</div>
+
+${type === 'full-report' ? `
+<!-- PAGE 3: MONTHLY PROJECTIONS -->
+<div class="page">
+  <div class="page-header">Monthly Projections</div>
+  <div class="monthly-tables">
+    <div class="table-title">Monthly Rental Revenue</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          ${MONTHS.map(m => `<th>${m}</th>`).join('')}
+          <th>Annual</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${['conservative', 'base', 'aggressive'].map(key => {
+          const vals = _monthlyRentals[key];
+          const annual = vals.reduce((a, b) => a + b, 0);
+          const className = key;
+          return `<tr>
+            <td class="scenario-label">${key.charAt(0).toUpperCase() + key.slice(1)}</td>
+            ${vals.map(v => `<td class="${className}">${fmtUSD(v)}</td>`).join('')}
+            <td class="${className}">${fmtUSD(annual)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+
+    <div class="table-title">Monthly Average Daily Rate (ADR)</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          ${MONTHS.map(m => `<th>${m}</th>`).join('')}
+          <th>Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${['conservative', 'base', 'aggressive'].map(key => {
+          const className = key;
+          return `<tr>
+            <td class="scenario-label">${key.charAt(0).toUpperCase() + key.slice(1)}</td>
+            ${_scenarioRentals[key].monthly.map((m, i) => {
+              const adr = m.occN > 0 ? _monthlyRentals[key][i] / m.occN : 0;
+              return `<td class="${className}">${fmtUSD(adr)}</td>`;
+            }).join('')}
+            <td class="${className}">${fmtUSD(_scenarioRentals[key].monthly.reduce((a, m, i) => a + (m.occN > 0 ? _monthlyRentals[key][i] / m.occN : 0), 0) / 12)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+
+    <div class="table-title">Monthly Occupancy Rate</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          ${MONTHS.map(m => `<th>${m}</th>`).join('')}
+          <th>Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${['conservative', 'base', 'aggressive'].map(key => {
+          const className = key;
+          return `<tr>
+            <td class="scenario-label">${key.charAt(0).toUpperCase() + key.slice(1)}</td>
+            ${_scenarioRentals[key].monthly.map(m => `<td class="${className}">${fmtPct(m.occ)}</td>`).join('')}
+            <td class="${className}">${fmtPct(_scenarioRentals[key].monthly.reduce((a, m) => a + m.occ, 0) / 12)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PAGE 4: COMPARABLE PROPERTIES -->
+<div class="page">
+  <div class="page-header">Comparable Properties</div>
+  <div class="comps-body">
+    ${compToShow.length > 0 ? `
+      <table class="comps-table">
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Beds</th>
+            <th>Baths</th>
+            <th>Revenue</th>
+            <th>ADR</th>
+            <th>Occ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${compToShow.map(c => `
+            <tr>
+              <td class="comp-name">${(c.title || 'Comp').substring(0, 35)}</td>
+              <td>${c.bedrooms || '-'}</td>
+              <td>${c.bathrooms || '-'}</td>
+              <td>${fmtUSD(Math.round(c.nrevenue_365_0 || 0))}</td>
+              <td>${fmtUSD(Math.round(c.anr_365_0 || 0))}</td>
+              <td>${fmtPct(c.occupancy_365_0 || 0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : '<p style="font-size: 10px; color: #6e6e73;">No comparable properties selected.</p>'}
+  </div>
+</div>
+` : ''}
+
+</body>
+</html>
+  `;
+
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.width = '8.5in';
+  tempDiv.innerHTML = htmlContent;
+  document.body.appendChild(tempDiv);
+
+  const filename = extras?.reportName || 'revenue_projection';
+  const safeFilename = (filename || 'report').replace(/[^a-zA-Z0-9]/g, '_');
+
+  const opt = {
+    margin: 0,
+    filename: safeFilename + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'], avoid: '.no-break' }
+  };
+
+  await html2pdf().set(opt).from(tempDiv).save();
+  document.body.removeChild(tempDiv);
+}
+
+/* ─── Reports Page Component ─── */
+const ReportsPage = ({ reports, onRefresh, projection, assumptions, comps, pmCompany }) => {
+  const [showGenModal, setShowGenModal] = useState(false);
+  const [showCSVModal, setShowCSVModal] = useState(false);
+  const [showColConfig, setShowColConfig] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [sortKey, setSortKey] = useState('created_at');
+  const [sortDir, setSortDir] = useState(-1);
+  const [editingCell, setEditingCell] = useState(null);
+  const columns = [
+    { key: 'name', label: 'Report Name', w: 200 },
+    { key: 'owner_name', label: 'Owner', w: 120 },
+    { key: 'property_address', label: 'Property', w: 160 },
+    { key: 'report_type', label: 'Type', w: 100 },
+    { key: 'status', label: 'Status', w: 80 },
+    { key: 'created_at', label: 'Created', w: 110 },
+  ];
+  const [visibleCols, setVisibleCols] = useState(new Set(columns.map(c=>c.key)));
+
+  const filtered = reports.filter(r => {
+    if (!searchQ) return true;
+    const q = searchQ.toLowerCase();
+    return (r.name||'').toLowerCase().includes(q) || (r.owner_name||'').toLowerCase().includes(q) || (r.property_address||'').toLowerCase().includes(q);
+  });
+  const sorted = useMemo(()=>[...filtered].sort((a,b)=>{
+    const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
+    return (av < bv ? -1 : av > bv ? 1 : 0) * sortDir;
+  }),[filtered,sortKey,sortDir]);
+
+  const deleteReport = async (id) => {
+    await fetch(`/api/reports/${id}`, { method: 'DELETE' });
+    onRefresh();
+  };
+
+  const [editValue, setEditValue] = useState('');
+  const cols = columns.filter(c => visibleCols.has(c.key));
+
+  const startEdit = (reportId, colKey, currentVal) => {
+    setEditingCell({ reportId, colKey });
+    setEditValue(currentVal || '');
+  };
+  const saveEdit = () => {
+    if (editingCell) editCell(editingCell.reportId, editingCell.colKey, editValue);
+  };
+
+  const editCell = async (reportId, colKey, value) => {
+    await fetch(`/api/reports/${reportId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [colKey]: value })
+    });
+    setEditingCell(null);
+    onRefresh();
+  };
+
+  const handleGenerate = async (info) => {
+    try {
+      await generatePDF(info.reportType, projection, assumptions, comps, {
+        owner_name: info.ownerName,
+        owner_email: info.ownerEmail,
+        owner_address: info.ownerAddress || '',
+        property_address: info.reportName
+      }, pmCompany, {
+        salesRepName: info.salesRepName,
+        salesRepPhotoData: info.salesRepPhotoData,
+        brandColor: info.brandColor,
+        companyLogoData: info.companyLogoData,
+        brandImageData: info.brandImageData,
+        propertyImageData: info.propertyImageData,
+        companyBlurb: info.companyBlurb,
+        companyName: info.companyName,
+        diffBlurb: info.diffBlurb,
+        salesRepCommentary: info.salesRepCommentary,
+        selectedComps: info.selectedComps,
+        reportName: info.reportName
+      });
+      await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: info.reportName,
+          owner_name: info.ownerName,
+          owner_email: info.ownerEmail,
+          property_address: comps[0]?.title || '',
+          report_type: info.reportType,
+          report_data: { projection, assumptions, pmCompany },
+          status: 'generated'
+        })
+      });
+      setShowGenModal(false);
+      onRefresh();
+    } catch(err) {
+      console.error('PDF generation error:', err);
+      alert('Error generating PDF: ' + err.message);
+    }
+  };
+
+  const handleCSVUpload = async (rows) => {
+    await fetch('/api/reports/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows, report_type: 'owner-brochure', report_data: { projection, assumptions, pmCompany } })
+    });
+    setShowCSVModal(false);
+    onRefresh();
+  };
+
+  const viewReport = async (report) => {
+    try {
+      const r = await fetch(`/api/reports/${report.id}`);
+      const data = await r.json();
+      const rptData = data.report_data || {};
+      await generatePDF(report.report_type || 'owner-brochure', rptData.projection || projection, rptData.assumptions || assumptions, comps, {
+        owner_name: report.owner_name,
+        owner_email: report.owner_email,
+        owner_address: report.owner_address,
+        property_address: report.property_address
+      }, rptData.pmCompany || pmCompany, {
+        reportName: (report.name||'report').replace(/[^a-zA-Z0-9]/g, '_')
+      });
+      onRefresh();
+    } catch(err) {
+      console.error('Error viewing report:', err);
+      alert('Error generating report: ' + err.message);
+    }
+  };
+
+  const th = { padding:'8px 10px', textAlign:'left', fontSize:10, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--text-muted)', borderBottom:'2px solid var(--border)', whiteSpace:'nowrap', fontWeight:600, background:'var(--surface)' };
+  const td = { padding:'8px 10px', fontSize:13, borderBottom:'1px solid var(--border-light)', whiteSpace:'nowrap', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis' };
+
+  const typeBadge = (type) => {
+    const colors = { 'owner-brochure': ['#dbeafe','#2563eb'], 'full-report': ['#fef3c7','#d97706'] };
+    const [bg, fg] = colors[type] || ['#f0f0f2','#666'];
+    return <span className="rpt-badge" style={{background:bg,color:fg}}>{type}</span>;
+  };
+
+  const statusBadge = (status) => {
+    const colors = { draft: ['#f0f0f2','#666'], generated: ['#f0fdf4','#16a34a'], sent: ['#dbeafe','#2563eb'] };
+    const [bg, fg] = colors[status] || ['#f0f0f2','#666'];
+    return <span className="rpt-badge" style={{background:bg,color:fg}}>{status}</span>;
+  };
+
+  const cellVal = (report, col) => {
+    if (col.key === 'created_at') return new Date(report.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    if (col.key === 'report_type') return typeBadge(report.report_type);
+    if (col.key === 'status') return statusBadge(report.status);
+    return report[col.key] ?? '—';
+  };
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+      {/* Toolbar */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:13}}>🔍</span>
+            <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search reports..." style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px 8px 32px',fontSize:13,width:240,outline:'none'}} />
+          </div>
+          <span style={{fontSize:12,color:'var(--text-muted)'}}>{sorted.length} report(s)</span>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowColConfig(!showColConfig)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',color:'var(--text-sec)'}}>
+            ⚙ Columns
+          </button>
+          <button onClick={()=>setShowCSVModal(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',color:'var(--text-sec)'}}>
+            📤 Import CSV
+          </button>
+          <button onClick={()=>setShowGenModal(true)} style={{background:'var(--accent)',border:'none',borderRadius:8,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#fff'}}>
+            + New Report
+          </button>
+        </div>
+      </div>
+
+      {/* Column visibility config */}
+      {showColConfig && (
+        <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:16}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+            <span style={{fontWeight:700,fontSize:13}}>Column Visibility & Order</span>
+            <div style={{display:'flex',gap:6}}>
+              <button onClick={()=>setVisibleRptCols(new Set(REPORT_COLUMNS.map(c=>c.key)))} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:11,cursor:'pointer'}}>Show All</button>
+              <button onClick={()=>setShowColConfig(false)} style={{background:'none',border:'none',fontSize:16,cursor:'pointer',color:'var(--text-sec)'}}>×</button>
+            </div>
+          </div>
+          <p style={{fontSize:11,color:'var(--text-muted)',marginBottom:10}}>Click to show/hide. Drag column headers in the table to reorder.</p>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+            {colOrder.map(key => {
+              const col = REPORT_COLUMNS.find(c => c.key === key);
+              if (!col) return null;
+              const vis = visibleRptCols.has(key);
+              return (
+                <button key={key} onClick={()=>setVisibleRptCols(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}
+                  style={{background:vis?'var(--accent)':'var(--surface2)',color:vis?'#fff':'var(--text-sec)',border:vis?'none':'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:500,cursor:'pointer'}}>
+                  {col.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+        <div style={{overflowX:'auto'}}>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead>
+              <tr>
+                <th style={{...th,width:80}}>Actions</th>
+                {cols.map(col => (
+                  <th key={col.key} style={{...th,width:col.w,cursor:'pointer'}}
+                    className={`rpt-col-header ${dragOverCol===col.key?'drag-over':''}`}
+                    draggable onDragStart={()=>handleDragStart(col.key)} onDragOver={e=>handleDragOver(e,col.key)} onDrop={()=>handleDrop(col.key)} onDragEnd={()=>{setDragCol(null);setDragOverCol(null);}}
+                    onClick={()=>{if(sortKey===col.key)setSortDir(d=>d*-1);else{setSortKey(col.key);setSortDir(-1);}}}>
+                    <span style={{cursor:'grab',marginRight:4,opacity:.4}}>⋮⋮</span>
+                    {col.label}{sortKey===col.key?(sortDir===1?' ↑':' ↓'):''}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(report => (
+                <tr key={report.id} onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={td}>
+                    <div style={{display:'flex',gap:4}}>
+                      <button onClick={()=>viewReport(report)} title="Download PDF" style={{background:'var(--accent-bg)',border:'none',borderRadius:4,padding:'3px 6px',cursor:'pointer',fontSize:11}}>📥</button>
+                      <button onClick={()=>deleteReport(report.id)} title="Delete" style={{background:'var(--red-bg)',border:'none',borderRadius:4,padding:'3px 6px',cursor:'pointer',fontSize:11}}>✕</button>
+                    </div>
+                  </td>
+                  {cols.map(col => (
+                    <td key={col.key} style={td}
+                      onDoubleClick={()=>col.editable && startEdit(report.id, col.key, report[col.key])}>
+                      {editingCell?.reportId === report.id && editingCell?.colKey === col.key ? (
+                        <input value={editValue} onChange={e=>setEditValue(e.target.value)} onBlur={saveEdit} onKeyDown={e=>e.key==='Enter'&&saveEdit()} autoFocus
+                          style={{background:'var(--accent-bg)',border:'1px solid var(--accent)',borderRadius:4,padding:'2px 6px',fontSize:12,width:'100%',outline:'none'}} />
+                      ) : cellVal(report, col)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {!sorted.length && (
+                <tr><td colSpan={cols.length+1} style={{padding:60,textAlign:'center',color:'var(--text-muted)',fontSize:14}}>
+                  No reports yet. Generate one from the Projection tab or import owners via CSV.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showGenModal && <GenerateReportModal onClose={()=>setShowGenModal(false)} onGenerate={handleGenerate} propertyAddress={comps[0]?.title || ''} pmCompany={pmCompany} comps={comps} />}
+      {showCSVModal && <CSVUploadModal onClose={()=>setShowCSVModal(false)} onUpload={handleCSVUpload} />}
+    </div>
+  );
+};
+
+/* ── CSV Upload Modal (stub) ── */
+const CSVUploadModal = ({ onClose, onUpload }) => {
+  const [csvText, setCsvText] = useState('');
+  const handleParse = () => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return;
+    const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
+    const rows = lines.slice(1).map(line => {
+      const vals = line.split(',');
+      const row = {};
+      headers.forEach((h,i) => row[h] = (vals[i]||'').trim());
+      return row;
+    });
+    onUpload(rows);
+  };
+  return (
+    <div className="rpt-modal-overlay" onClick={onClose}>
+      <div className="rpt-modal" onClick={e=>e.stopPropagation()}>
+        <h3>Import Owners from CSV</h3>
+        <p style={{fontSize:12,color:'var(--text-muted)'}}>Paste CSV with headers: name, email, address, property_address, value</p>
+        <textarea value={csvText} onChange={e=>setCsvText(e.target.value)} rows={8} placeholder={"name,email,address,property_address,value\nJohn Smith,john@example.com,123 Main St,456 Beach Rd,$500000"} />
+        <div style={{display:'flex',gap:10,marginTop:12}}>
+          <button onClick={onClose} style={{flex:1,padding:10,border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:13,fontWeight:600}}>Cancel</button>
+          <button onClick={handleParse} style={{flex:1,padding:10,border:'none',borderRadius:8,background:'var(--accent)',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>Import</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Generate Report Modal ── */
+const GenerateReportModal = ({ onClose, onGenerate, propertyAddress, pmCompany, comps=[] }) => {
+  const [reportType, setReportType] = useState('owner-brochure');
+  const [ownerName, setOwnerName] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerAddress, setOwnerAddress] = useState('');
+  const [reportName, setReportName] = useState('');
+  const [value, setValue] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [companyBlurb, setCompanyBlurb] = useState('');
+  const [diffBlurb, setDiffBlurb] = useState('');
+  const [salesRepName, setSalesRepName] = useState('');
+  const [salesRepCommentary, setSalesRepCommentary] = useState('');
+  const [selectedComps, setSelectedComps] = useState([]);
+  const [brandColor, setBrandColor] = useState('#c026d3');
+  const [brandColors, setBrandColors] = useState(null);
+  const [fetchingColors, setFetchingColors] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const [companyLogoData, setCompanyLogoData] = useState(null);
+  const [brandImage, setBrandImage] = useState(null);
+  const [brandImageData, setBrandImageData] = useState(null);
+  const [propertyImage, setPropertyImage] = useState(null);
+  const [propertyImageData, setPropertyImageData] = useState(null);
+  const [salesRepPhoto, setSalesRepPhoto] = useState(null);
+  const [salesRepPhotoData, setSalesRepPhotoData] = useState(null);
+
+  const logoInputRef = useRef(null);
+  const brandImageInputRef = useRef(null);
+  const propertyImageInputRef = useRef(null);
+  const photoInputRef = useRef(null);
+
+  // Load templates on mount
+  useEffect(() => {
+    fetch('/api/report-templates')
+      .then(r => r.json())
+      .then(data => setTemplates(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  // Fetch brand colors from PM website on mount
+  useEffect(() => {
+    const website = pmCompany?.website?.trim();
+    if (!website) return;
+    setFetchingColors(true);
+    fetch(`/api/brand-colors?url=${encodeURIComponent(website)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.colors && data.colors.length > 0) {
+          setBrandColors(data.colors);
+          setBrandColor(data.colors[0].hex);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setFetchingColors(false));
+  }, [pmCompany?.website]);
+
+  const handleLoadTemplate = (templateId) => {
+    const t = templates.find(x => x.id === templateId);
+    if (!t) return;
+    setCompanyName(t.company_name || '');
+    setCompanyBlurb(t.company_blurb || '');
+    setDiffBlurb(t.diff_blurb || '');
+    setSalesRepName(t.sales_rep_name || '');
+    setBrandColor(t.brand_color || '#c026d3');
+    if (t.company_logo) setCompanyLogoData(t.company_logo);
+    if (t.brand_image) setBrandImageData(t.brand_image);
+    if (t.sales_rep_photo) setSalesRepPhotoData(t.sales_rep_photo);
+  };
+
+  const handleSaveTemplate = () => {
+    const templateName = prompt('Template name:');
+    if (!templateName) return;
+    fetch('/api/report-templates', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        template_name: templateName,
+        company_name: companyName,
+        company_blurb: companyBlurb,
+        diff_blurb: diffBlurb,
+        brand_color: brandColor,
+        sales_rep_name: salesRepName,
+        company_logo: companyLogoData || '',
+        brand_image: brandImageData || '',
+        sales_rep_photo: salesRepPhotoData || '',
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        alert('Template saved!');
+        fetch('/api/report-templates').then(r => r.json()).then(data => setTemplates(Array.isArray(data) ? data : [])).catch(() => {});
+      }
+    })
+    .catch(e => alert('Error saving template: ' + e.message));
+  };
+
+  const handleImageUpload = (file, setter, dataSetter) => {
+    if (!file) return;
+    setter(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => dataSetter(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const toggleComp = (compId) => {
+    const id = String(compId);
+    if (selectedComps.includes(id)) {
+      setSelectedComps(selectedComps.filter(x => x !== id));
+    } else if (selectedComps.length < 5) {
+      setSelectedComps([...selectedComps, id]);
+    }
+  };
+
+  const reportTypes = [
+    {id:'owner-brochure', label:'Owner Brochure', desc:'2-page cover + summary'},
+    {id:'full-report', label:'Full Report', desc:'4-page with projections + comps'},
+  ];
+
+  return (
+    <div className="rpt-modal-overlay" onClick={onClose}>
+      <div className="rpt-modal" onClick={e=>e.stopPropagation()} style={{maxHeight:'85vh',overflowY:'auto'}}>
+        <h3>Generate Report</h3>
+
+        {/* Template Load/Save */}
+        {templates.length > 0 && (
+          <div style={{marginBottom:14,padding:'10px',background:'var(--surface2)',borderRadius:8}}>
+            <label>Load Template</label>
+            <div style={{display:'flex',gap:6}}>
+              <select value={selectedTemplate} onChange={e=>{ const id=parseInt(e.target.value); setSelectedTemplate(id); handleLoadTemplate(id); }} style={{flex:1,padding:'8px',borderRadius:6,border:'1px solid var(--border)'}}>
+                <option value="">-- Select template --</option>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.template_name}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Report Type */}
+        <div style={{marginBottom:16}}>
+          <label>Report Type</label>
+          <div style={{display:'flex',gap:8}}>
+            {reportTypes.map(t=>(
+              <div key={t.id} className={`rpt-type-btn ${reportType===t.id?'active':''}`} onClick={()=>setReportType(t.id)}>
+                <div className="label">{t.label}</div>
+                <div className="desc">{t.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <label>Report Name</label>
+        <input value={reportName} onChange={e=>setReportName(e.target.value)} placeholder={`${propertyAddress || 'Property'} Revenue Projection`} />
+
+        {/* Owner Info */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <div><label>Owner Name</label><input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="John Smith" /></div>
+          <div><label>Owner Email</label><input value={ownerEmail} onChange={e=>setOwnerEmail(e.target.value)} placeholder="john@example.com" /></div>
+        </div>
+        <label>Property Address</label>
+        <input value={propertyAddress} disabled style={{opacity:.6}} />
+
+        {/* Company Info Section */}
+        <div style={{borderTop:'1px solid var(--border)',marginTop:14,paddingTop:14}}>
+          <label style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--text-muted)',marginBottom:8,display:'block'}}>Company Details (Optional)</label>
+          <label>Company Name</label>
+          <input value={companyName} onChange={e=>setCompanyName(e.target.value)} placeholder="Your Company Name" />
+          <label>Company Blurb</label>
+          <textarea value={companyBlurb} onChange={e=>setCompanyBlurb(e.target.value)} placeholder="Brief description of your company and services..." />
+          <label>Company Logo (Image)</label>
+          <input type="file" accept="image/*" ref={logoInputRef} style={{display:'none'}} onChange={e=>handleImageUpload(e.target.files[0], setCompanyLogo, setCompanyLogoData)} />
+          <button onClick={()=>logoInputRef.current?.click()} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:12,fontWeight:600,width:'100%',marginBottom:12}}>
+            {companyLogo ? 'Change Logo' : 'Upload Logo'}
+          </button>
+          <label>Brand/Hero Image</label>
+          <input type="file" accept="image/*" ref={brandImageInputRef} style={{display:'none'}} onChange={e=>handleImageUpload(e.target.files[0], setBrandImage, setBrandImageData)} />
+          <button onClick={()=>brandImageInputRef.current?.click()} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:12,fontWeight:600,width:'100%',marginBottom:12}}>
+            {brandImage ? 'Change Brand Image' : 'Upload Brand Image'}
+          </button>
+        </div>
+
+        {/* Differentiation Section */}
+        <div style={{borderTop:'1px solid var(--border)',marginTop:14,paddingTop:14}}>
+          <label style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--text-muted)',marginBottom:8,display:'block'}}>Differentiation & Property</label>
+          <label>How You Add Value (Differentiation Blurb)</label>
+          <textarea value={diffBlurb} onChange={e=>setDiffBlurb(e.target.value)} placeholder="Describe what sets your property and services apart..." />
+          <label>Property Image</label>
+          <input type="file" accept="image/*" ref={propertyImageInputRef} style={{display:'none'}} onChange={e=>handleImageUpload(e.target.files[0], setPropertyImage, setPropertyImageData)} />
+          <button onClick={()=>propertyImageInputRef.current?.click()} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:12,fontWeight:600,width:'100%',marginBottom:12}}>
+            {propertyImage ? 'Change Property Image' : 'Upload Property Image'}
+          </button>
+        </div>
+
+        {/* Sales Rep Section */}
+        <div style={{borderTop:'1px solid var(--border)',marginTop:14,paddingTop:14}}>
+          <label style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--text-muted)',marginBottom:8,display:'block'}}>Sales Representative (Optional)</label>
+          <label>Sales Rep Name</label>
+          <input value={salesRepName} onChange={e=>setSalesRepName(e.target.value)} placeholder="Jane Doe" />
+          <label>Headshot</label>
+          <input type="file" accept="image/*" ref={photoInputRef} style={{display:'none'}} onChange={e=>handleImageUpload(e.target.files[0], setSalesRepPhoto, setSalesRepPhotoData)} />
+          <button onClick={()=>photoInputRef.current?.click()} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:12,fontWeight:600,width:'100%',marginBottom:12}}>
+            {salesRepPhotoData ? 'Change Photo' : 'Upload Photo'}
+          </button>
+          <label>Sales Rep Commentary</label>
+          <textarea value={salesRepCommentary} onChange={e=>setSalesRepCommentary(e.target.value)} placeholder="Your personal notes about this property and market..." />
+        </div>
+
+        {/* Comp Selector (only for full-report) */}
+        {reportType === 'full-report' && comps.length > 0 && (
+          <div style={{borderTop:'1px solid var(--border)',marginTop:14,paddingTop:14}}>
+            <label style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--text-muted)',marginBottom:8,display:'block'}}>Select Comps (Max 5)</label>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {comps.slice(0,20).map(c => (
+                <label key={c.comp_id || c.id} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',fontSize:13}}>
+                  <input type="checkbox" checked={selectedComps.includes(String(c.comp_id || c.id))} onChange={()=>toggleComp(c.comp_id || c.id)} />
+                  {c.title || 'Comp'}
+                </label>
+              ))}
+            </div>
+            <div style={{fontSize:10,color:'var(--text-muted)',marginTop:6}}>Selected: {selectedComps.length} / 5</div>
+          </div>
+        )}
+
+        {/* Brand Color */}
+        <div style={{borderTop:'1px solid var(--border)',marginTop:14,paddingTop:10}}>
+          <label style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--text-muted)',marginBottom:8,display:'block'}}>Brand Color</label>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <input type="color" value={brandColor} onChange={e=>setBrandColor(e.target.value)} style={{width:40,height:34,border:'1px solid var(--border)',borderRadius:6,padding:2,cursor:'pointer',background:'var(--surface)'}} />
+            <input value={brandColor} onChange={e=>{if(/^#[0-9a-fA-F]{0,6}$/.test(e.target.value))setBrandColor(e.target.value)}} style={{width:90,fontFamily:'monospace',fontSize:13}} placeholder="#1B3770" />
+            <div style={{width:32,height:32,borderRadius:6,background:brandColor,border:'1px solid var(--border)',flexShrink:0}} />
+          </div>
+          {brandColors && brandColors.length > 0 && (
+            <div style={{marginTop:8}}>
+              <label style={{fontSize:10,color:'var(--text-muted)'}}>Auto-detected:</label>
+              <div style={{display:'flex',gap:4,marginTop:4}}>
+                {brandColors.slice(0,6).map((c,i) => (
+                  <div key={i} onClick={()=>setBrandColor(c.hex)} style={{width:24,height:24,borderRadius:4,background:c.hex,border:brandColor===c.hex?'2px solid var(--accent)':'1px solid var(--border)',cursor:'pointer'}} title={c.hex} />
+                ))}
+              </div>
+            </div>
+          )}
+          {fetchingColors && <div style={{fontSize:10,color:'var(--text-muted)',marginTop:4}}>Fetching colors...</div>}
+        </div>
+
+        {/* Actions */}
+        <div style={{display:'flex',gap:10,marginTop:14}}>
+          <button onClick={onClose} style={{flex:1,padding:10,border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:13,fontWeight:600}}>Cancel</button>
+          <button onClick={handleSaveTemplate} style={{flex:1,padding:10,border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:13,fontWeight:600}}>Save as Template</button>
+          <button onClick={()=>onGenerate({reportType, reportName:reportName||`${propertyAddress||'Property'} Revenue Projection`, ownerName, ownerEmail, ownerAddress, value, companyName, companyBlurb, diffBlurb, salesRepName, salesRepCommentary, salesRepPhotoData, companyLogoData, brandImageData, propertyImageData, selectedComps, brandColor})} style={{flex:1,padding:10,border:'none',borderRadius:8,background:brandColor||'var(--accent)',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>
+            Generate & Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════ MAIN APP ═══════════════ */
+function App() {
+  const [integrationKey, setIntegrationKey] = useState('BKXc_wza6e5A3iAcyJF1MNLk2BVrVw');
+  const [userKey, setUserKey] = useState('zgo_cxsKPvbXWwxqxcijPqesySzsNw');
+  const [showKeys, setShowKeys] = useState(false);
+
+  const [searchMode, setSearchMode] = useState('address');
+  const [address, setAddress] = useState('605 Lyon St, San Francisco, CA 94117');
+  const [lat, setLat] = useState('37.7749');
+  const [lng, setLng] = useState('-122.4452');
+  const [listingId, setListingId] = useState('');
+  const [radius, setRadius] = useState('5000');
+  const [limit, setLimit] = useState('25');
+  const [filters, setFilters] = useState({ minBed:'', maxBed:'', minBath:'', maxBath:'', minSleeps:'', maxSleeps:'', minRevenue:'', minOcc:'', minADR:'', minRating:'', minReviews:'' });
+  const [selRoomTypes, setSelRoomTypes] = useState([]);
+  const [selAmenities, setSelAmenities] = useState([]);
+
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const acTimerRef = React.useRef(null);
+  const acAbortRef = React.useRef(null);
+  const handleAddressChange = (val) => {
+    setAddress(val);
+    clearTimeout(acTimerRef.current);
+    if (val.length < 4) { setAddressSuggestions([]); setShowSuggestions(false); return; }
+    acTimerRef.current = setTimeout(async () => {
+      if (acAbortRef.current) acAbortRef.current.abort();
+      const ctrl = new AbortController();
+      acAbortRef.current = ctrl;
+      try {
+        const r = await fetch(`/api/autocomplete?q=${encodeURIComponent(val)}`, { signal: ctrl.signal });
+        const data = await r.json();
+        setAddressSuggestions(data);
+        setShowSuggestions(data.length > 0);
+      } catch(e) { if (e.name !== 'AbortError') setAddressSuggestions([]); }
+    }, 150);
+  };
+  const selectSuggestion = async (s) => {
+    setAddress(s.display_name);
+    setShowSuggestions(false);
+    setAddressSuggestions([]);
+    // Resolve lat/lon from the selected suggestion's magicKey
+    try {
+      const r = await fetch(`/api/resolve-address?text=${encodeURIComponent(s.display_name)}&magicKey=${encodeURIComponent(s.magicKey || '')}`);
+      if (r.ok) {
+        const data = await r.json();
+        if (data.lat && data.lon) {
+          setAddress(data.display_name || s.display_name);
+          setLat(String(data.lat));
+          setLng(String(data.lon));
+        }
+      }
+    } catch(e) { console.warn('Address resolve failed', e); }
+  };
+
+  const [comps, setComps] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [view, setView] = useState('search');
+  const [showWidgets, setShowWidgets] = useState(false);
+  const [visibleCols, setVisibleCols] = useState(new Set(DEFAULT_VISIBLE));
+
+  const [assumptions, setAssumptions] = useState({});
+  const [seasonality, setSeasonality] = useState(null); // market-specific seasonality factors
+
+  // PM Company info
+  const [pmCompany, setPmCompany] = useState({ name: '', website: '', perStayFee: '', perNightFee: '', pctFee: '' });
+  const updatePM = (k, v) => setPmCompany(p => ({ ...p, [k]: v }));
+
+  // Reports
+  const [reports, setReports] = useState([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const loadReports = async () => { try { const r = await fetch('/api/reports'); setReports(await r.json()); } catch(e) { console.error(e); } };
+
+  // Search history
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const loadHistory = async () => {
+    try { const r = await fetch('/api/searches'); setSearchHistory(await r.json()); } catch(e) { console.error(e); }
+  };
+  useEffect(() => { loadHistory(); loadReports(); }, []);
+
+  const saveSearch = async (addr, sLat, sLng, compArr) => {
+    try {
+      await fetch('/api/searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: addr || `${sLat}, ${sLng}`,
+          lat: parseFloat(sLat), lng: parseFloat(sLng),
+          radius: parseInt(radius) || 5000,
+          filters: { ...filters, roomTypes: selRoomTypes },
+          comp_count: compArr.length,
+          results: compArr
+        })
+      });
+      loadHistory();
+    } catch(e) { console.error('Failed to save search:', e); }
+  };
+
+  const loadSavedSearch = async (id) => {
+    try {
+      const r = await fetch(`/api/searches/${id}`);
+      const data = await r.json();
+      if (data.results?.length) {
+        setComps(data.results);
+        setSelected(new Set(data.results.map(c => c.listing_id)));
+        setLat(String(data.lat)); setLng(String(data.lng));
+        if (data.address) setAddress(data.address);
+        setView('comps');
+      }
+    } catch(e) { setError('Failed to load search'); }
+  };
+
+  const deleteSavedSearch = async (id, e) => {
+    e.stopPropagation();
+    await fetch(`/api/searches/${id}`, { method: 'DELETE' });
+    loadHistory();
+  };
+
+  const handleSearch = async () => {
+    setError(''); setLoading(true); setSeasonality(null);
+    try {
+      let sLat=lat, sLng=lng;
+      if(searchMode==='address'){const g=await geocode(address);sLat=g.lat;sLng=g.lng;setLat(String(g.lat));setLng(String(g.lng));}
+      const isAirbnb = (c) => c.source === 'A';
+      let resultComps = [];
+      if(searchMode==='listing'){
+        const d=await fetchListingById({integrationKey,userKey,listingId});
+        const raw=Array.isArray(d)?d:[d];
+        console.log('Comp sources:', raw.map(c=>c.source));
+        resultComps=raw.filter(isAirbnb);
+        setComps(resultComps); setSelected(new Set(resultComps.map(c=>c.listing_id))); setView('comps');
+        saveSearch(listingId, resultComps[0]?.lat, resultComps[0]?.long, resultComps);
+      } else {
+        const desiredLimit = parseInt(limit) || 25;
+        // Over-request to account for VRBO listings being filtered out
+        const overLimit = Math.min(200, desiredLimit * 4);
+        const d=await fetchCandidates({integrationKey,userKey,lat:sLat,long:sLng,radius,limit:overLimit,...filters,roomTypes:selRoomTypes.length?selRoomTypes:undefined});
+        const raw=Array.isArray(d)?d:d.listings||d.results||d.candidates||[d];
+        console.log('Comp sources:', raw.map(c=>c.source));
+        resultComps=raw.filter(isAirbnb).slice(0, desiredLimit);
+        setComps(resultComps); setSelected(new Set(resultComps.map(c=>c.listing_id))); setView('comps');
+        saveSearch(address, sLat, sLng, resultComps);
+      }
+      // Fetch market-specific seasonality from Market Report API (non-blocking)
+      if (resultComps.length > 0) {
+        const marketId = resultComps.find(c => c.market_id)?.market_id;
+        const medBedrooms = resultComps.map(c=>c.bedrooms).filter(b=>b!=null).sort((a,b)=>a-b);
+        const brParam = medBedrooms.length ? medBedrooms[Math.floor(medBedrooms.length/2)] : null;
+        if (marketId) {
+          console.log(`[Seasonality] Fetching for market_id=${marketId}, bedrooms=${brParam}`);
+          fetchMarketSeasonality(marketId, brParam).then(s => {
+            if (s) { setSeasonality(s); console.log('[Seasonality] Market data loaded'); }
+            else console.log('[Seasonality] Using fallback curves');
+          });
+        }
+      }
+    } catch(e){setError(e.message);} finally{setLoading(false);}
+  };
+
+  const toggleComp = id => {
+    if(id==='__all') return setSelected(new Set(comps.map(c=>c.listing_id)));
+    if(id==='__none') return setSelected(new Set());
+    setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+  };
+
+  // Client-side filtering
+  const filteredComps = useMemo(() => {
+    return comps.filter(c => {
+      if (filters.minBed && c.bedrooms < parseInt(filters.minBed)) return false;
+      if (filters.maxBed && c.bedrooms > parseInt(filters.maxBed)) return false;
+      if (filters.minBath && c.bathrooms < parseFloat(filters.minBath)) return false;
+      if (filters.maxBath && c.bathrooms > parseFloat(filters.maxBath)) return false;
+      if (filters.minSleeps && c.sleeps < parseInt(filters.minSleeps)) return false;
+      if (filters.maxSleeps && c.sleeps > parseInt(filters.maxSleeps)) return false;
+      if (filters.minRevenue && (c.nrevenue_365_0 == null || c.nrevenue_365_0 < parseFloat(filters.minRevenue))) return false;
+      if (filters.minOcc && (c.occupancy_365_0 == null || c.occupancy_365_0 * 100 < parseFloat(filters.minOcc))) return false;
+      if (filters.minADR && (c.anr_365_0 == null || c.anr_365_0 < parseFloat(filters.minADR))) return false;
+      if (filters.minRating && (c.star_rating == null || c.star_rating < parseFloat(filters.minRating))) return false;
+      if (filters.minReviews && (c.review_count == null || c.review_count < parseInt(filters.minReviews))) return false;
+      if (selRoomTypes.length && !selRoomTypes.includes(c.room_type)) return false;
+      if (selAmenities.length) {
+        const raw = c.amenities || '';
+        const delim = raw.includes(',') ? ',' : ' ';
+        const compAmenities = raw.split(delim).map(a => a.trim().toLowerCase()).filter(Boolean);
+        if (!selAmenities.every(req => compAmenities.includes(req.toLowerCase()))) return false;
+      }
+      return true;
+    });
+  }, [comps, filters, selRoomTypes, selAmenities]);
+
+  // Extract unique amenities from loaded comps, sorted by frequency
+  const availableAmenities = useMemo(() => {
+    const counts = {};
+    comps.forEach(c => {
+      if (!c.amenities) return;
+      // Amenities may be comma-separated or space-separated; detect format
+      const delim = c.amenities.includes(',') ? ',' : ' ';
+      c.amenities.split(delim).map(a => a.trim()).filter(Boolean).forEach(a => {
+        counts[a] = (counts[a] || 0) + 1;
+      });
+    });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]).map(([name]) => name);
+  }, [comps]);
+
+  const selectedComps = useMemo(()=>filteredComps.filter(c=>selected.has(c.listing_id)),[filteredComps,selected]);
+  const hiddenComps = comps.length - filteredComps.length;
+  const projection = useMemo(()=>computeProjection(selectedComps, assumptions, seasonality),[selectedComps,assumptions,seasonality]);
+  const updateA = (k,v) => setAssumptions(p=>({...p,[k]:v}));
+
+  const clearFilters = () => {
+    setFilters({ minBed:'', maxBed:'', minBath:'', maxBath:'', minSleeps:'', maxSleeps:'', minRevenue:'', minOcc:'', minADR:'', minRating:'', minReviews:'' });
+    setSelRoomTypes([]);
+    setSelAmenities([]);
+  };
+
+  /* Demo data */
+  const loadDemo = () => {
+    const sLat=37.7749, sLng=-122.4452;
+    const demo=Array.from({length:20},(_,i)=>({
+      listing_id:1000+i,
+      title:['NoPa Victorian','Hayes Valley Modern','Alamo Square Suite','Panhandle Garden','Divisadero Loft','Cole Valley Cottage','NOPA 2BR Gem','Western Addition Studio','Haight-Ashbury Pad','USF Area Apt','Inner Richmond Home','Golden Gate Heights','Laurel Heights 3BR','Presidio Heights','Pacific Heights Condo','Marina District Flat','Japantown Studio','Fillmore District','Duboce Triangle 1BR','Castro Charmer'][i],
+      bedrooms:[2,1,3,2,1,2,2,0,1,1,3,2,3,2,2,1,0,1,1,2][i], bathrooms:[1,1,2,1,1,1.5,1,1,1,1,2,1.5,2,1,2,1,1,1,1,1][i], sleeps:[4,2,6,4,2,4,4,2,3,2,6,4,6,4,4,2,2,2,3,4][i],
+      property_type:['apartment','apartment','house','apartment','apartment','house','apartment','apartment','apartment','apartment','house','house','house','apartment','apartment','apartment','apartment','apartment','apartment','house'][i],
+      room_type:['house','house','house','house','house','house','house','room','house','room','house','house','house','house','house','house','room','house','house','house'][i],
+      source:['airbnb','airbnb','vrbo','airbnb','airbnb','vrbo','airbnb','airbnb','vrbo','airbnb','vrbo','airbnb','vrbo','airbnb','airbnb','vrbo','airbnb','airbnb','vrbo','airbnb'][i],
+      nrevenue_365_0:[58000,42000,82000,51000,35000,63000,56000,22000,38000,20000,78000,60000,85000,67000,72000,40000,18000,36000,33000,55000][i],
+      occupancy_365_0:[.78,.82,.65,.75,.88,.71,.76,.90,.80,.85,.62,.68,.60,.72,.70,.84,.92,.81,.86,.74][i],
+      anr_365_0:[204,140,346,186,109,243,202,67,130,64,345,242,388,255,282,130,54,122,105,204][i],
+      nrevpar_365_0:[159,115,225,140,96,173,154,60,104,54,214,165,233,184,197,109,50,99,90,151][i],
+      star_rating:[4.85,4.72,4.91,4.68,4.55,4.88,4.79,4.42,4.60,4.38,4.93,4.82,4.95,4.76,4.80,4.65,4.30,4.58,4.52,4.73][i],
+      review_count:[156,89,45,112,203,67,134,312,178,245,34,78,28,95,62,198,287,145,210,88][i],
+      distance_meters:[120,350,800,450,280,1100,200,500,1400,600,2200,1800,2500,1600,2000,2800,700,400,1300,900][i],
+      cleaning_fee:[100,65,150,85,50,110,95,30,60,25,140,105,160,120,130,55,20,55,45,90][i],
+      los_365_0:[3.1,2.3,4.2,2.8,1.9,3.5,2.9,1.5,2.4,1.6,4.8,3.7,5.1,3.3,3.6,2.0,1.3,2.1,1.8,2.7][i],
+      lead_time_365_0:[16,8,24,12,5,18,14,3,9,4,28,20,30,17,22,6,2,7,5,13][i],
+      bookable_nights_365_0:[320,340,280,310,350,290,315,355,330,345,260,285,250,300,295,345,360,335,340,305][i],
+      blocked_nights_365_0:[20,10,40,25,5,35,22,4,15,8,50,35,55,28,30,8,2,12,10,25][i],
+      booked_nights_365_0:[250,279,182,233,308,206,239,320,264,293,161,194,150,216,207,290,331,271,293,226][i],
+      available_nights_365_0:[70,61,98,77,42,84,76,35,66,52,99,91,100,84,88,55,29,64,47,79][i],
+      lat: sLat + (Math.random()-0.5)*0.025,
+      long: sLng + (Math.random()-0.5)*0.025,
+      currency:'USD', thumb_url:null, status:'active'
+    }));
+    setComps(demo); setSelected(new Set(demo.map(c=>c.listing_id))); setView('comps');
+  };
+
+  /* ─── Tab bar style matching WH ─── */
+  const TabBtn = ({label,active,onClick,count}) => (
+    <button onClick={onClick} style={{ background:active?'var(--accent)':'transparent', color:active?'#fff':'var(--text-sec)', border:'none', borderRadius:8, padding:'7px 16px', fontSize:13, fontWeight:600, cursor:'pointer', transition:'all .15s', display:'flex', gap:6, alignItems:'center' }}>
+      {label}{count!=null && <span style={{background:active?'rgba(255,255,255,0.2)':'var(--surface2)',padding:'1px 7px',borderRadius:10,fontSize:11}}>{count}</span>}
+    </button>
+  );
+
+  const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%' };
+
+  return (
+    <div style={{ maxWidth:1500, margin:'0 auto', padding:'16px 20px' }}>
+      {/* ─── Top Bar ─── */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, flexWrap:'wrap', gap:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <img src="https://app.usewheelhouse.com/api/logo.png" alt="Wheelhouse" style={{ height:30, objectFit:'contain' }} onError={e=>{e.target.style.display='none'}} />
+          <div>
+            <h1 style={{ fontSize:18, fontWeight:700, letterSpacing:'-0.02em' }}>Underwriting Tool</h1>
+            <p style={{ fontSize:12, color:'var(--text-muted)' }}>CompSet API · Revenue Projections</p>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:4, background:'var(--surface)', borderRadius:10, padding:3, border:'1px solid var(--border)' }}>
+          <TabBtn label="Search" active={view==='search'} onClick={()=>setView('search')} />
+          <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
+          <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
+          <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
+          <TabBtn label="Reports" active={view==='reports'} onClick={()=>{setView('reports');loadReports();}} count={reports.length||null} />
+          <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
+          <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
+        </div>
+      </div>
+
+      {/* API Keys */}
+      <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, marginBottom:12, padding:showKeys?'16px':'10px 16px' }}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer'}} onClick={()=>setShowKeys(!showKeys)}>
+          <div style={{fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8}}>
+            API Keys
+            {integrationKey&&userKey&&<span style={{fontSize:10,background:'var(--green-bg)',color:'var(--green)',padding:'2px 8px',borderRadius:4,fontWeight:600}}>Connected</span>}
+          </div>
+          <span style={{color:'var(--text-muted)',fontSize:11}}>{showKeys?'Hide':'Show'}</span>
+        </div>
+        {showKeys&&(
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:12}}>
+            <div><label style={{fontSize:11,color:'var(--text-muted)',fontWeight:500}}>Integration Key</label><input type="password" value={integrationKey} onChange={e=>setIntegrationKey(e.target.value)} style={{...inputStyle,marginTop:4}} /></div>
+            <div><label style={{fontSize:11,color:'var(--text-muted)',fontWeight:500}}>User Key</label><input type="password" value={userKey} onChange={e=>setUserKey(e.target.value)} style={{...inputStyle,marginTop:4}} /></div>
+          </div>
+        )}
+      </div>
+
+      {error&&<div style={{background:'var(--red-bg)',border:'1px solid rgba(220,38,38,0.2)',borderRadius:8,padding:'10px 14px',marginBottom:12,color:'var(--red)',fontSize:13}}>{error}</div>}
+
+      {/* ════ SEARCH ════ */}
+      {view==='search'&&(
+        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24 }}>
+          <div style={{display:'flex',gap:4,marginBottom:16,background:'var(--surface2)',borderRadius:8,padding:3,width:'fit-content'}}>
+            {['address','coords','listing'].map(m=>(
+              <button key={m} onClick={()=>setSearchMode(m)} style={{background:searchMode===m?'var(--surface)':'transparent',border:searchMode===m?'1px solid var(--border)':'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:500,cursor:'pointer',color:'var(--text)',boxShadow:searchMode===m?'0 1px 3px rgba(0,0,0,0.05)':'none'}}>
+                {m==='address'?'Address':m==='coords'?'Lat / Long':'Listing ID'}
+              </button>
+            ))}
+          </div>
+
+          {searchMode==='address'&&(
+            <div style={{display:'flex',gap:8,marginBottom:16}}>
+              <div style={{flex:1,position:'relative'}}>
+                <span style={{position:'absolute',left:12,top:10,color:'var(--text-muted)',fontSize:14}}>🔍</span>
+                <input value={address} onChange={e=>handleAddressChange(e.target.value)} onFocus={()=>{if(addressSuggestions.length)setShowSuggestions(true)}} onBlur={()=>setTimeout(()=>setShowSuggestions(false),200)} placeholder="Search for a location" style={{...inputStyle,paddingLeft:34}} autoComplete="off" />
+                {showSuggestions && addressSuggestions.length > 0 && (
+                  <div style={{position:'absolute',top:'100%',left:0,right:0,zIndex:50,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:4,boxShadow:'0 8px 24px rgba(0,0,0,0.12)',maxHeight:220,overflowY:'auto'}}>
+                    {addressSuggestions.map((s,i)=>(
+                      <div key={i} onMouseDown={()=>selectSuggestion(s)} style={{padding:'10px 14px',fontSize:12,cursor:'pointer',borderBottom:i<addressSuggestions.length-1?'1px solid var(--border-light)':'none',color:'var(--text)',lineHeight:1.4}} onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                        {s.display_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {searchMode==='coords'&&(
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+              <div><label style={{fontSize:11,color:'var(--text-muted)'}}>Latitude</label><input type="number" step="any" value={lat} onChange={e=>setLat(e.target.value)} style={{...inputStyle,marginTop:4}} /></div>
+              <div><label style={{fontSize:11,color:'var(--text-muted)'}}>Longitude</label><input type="number" step="any" value={lng} onChange={e=>setLng(e.target.value)} style={{...inputStyle,marginTop:4}} /></div>
+            </div>
+          )}
+          {searchMode==='listing'&&<div style={{marginBottom:16}}><input value={listingId} onChange={e=>setListingId(e.target.value)} placeholder="Wheelhouse Listing ID" style={inputStyle} /></div>}
+
+          {searchMode!=='listing'&&(
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10,marginBottom:16}}>
+              <div><label style={{fontSize:11,color:'var(--text-muted)'}}>Radius (m)</label><input type="number" value={radius} onChange={e=>setRadius(e.target.value)} style={{...inputStyle,marginTop:4}} /></div>
+              <div><label style={{fontSize:11,color:'var(--text-muted)'}}>Limit</label><input type="number" min="5" max="25" value={limit} onChange={e=>{const v=Math.min(25,Math.max(5,parseInt(e.target.value)||5));setLimit(String(v))}} style={{...inputStyle,marginTop:4}} /></div>
+              <div><label style={{fontSize:11,color:'var(--text-muted)'}}>Min Beds</label><input type="number" value={filters.minBed} onChange={e=>setFilters(p=>({...p,minBed:e.target.value}))} style={{...inputStyle,marginTop:4}} /></div>
+              <div><label style={{fontSize:11,color:'var(--text-muted)'}}>Max Beds</label><input type="number" value={filters.maxBed} onChange={e=>setFilters(p=>({...p,maxBed:e.target.value}))} style={{...inputStyle,marginTop:4}} /></div>
+            </div>
+          )}
+
+          <button onClick={handleSearch} disabled={loading||!integrationKey||!userKey} style={{width:'100%',padding:12,background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:loading||!integrationKey||!userKey?'not-allowed':'pointer',opacity:loading||!integrationKey||!userKey?0.5:1}}>
+            {loading?'Searching...':'Search this area'}
+          </button>
+        </div>
+      )}
+
+      {/* ════ COMPS + MAP ════ */}
+      {view==='comps'&&(
+        <div style={{display:'flex',gap:12}}>
+          {/* Left status sidebar */}
+          <StatusBar inSet={selectedComps.length} inView={filteredComps.length} compare={0} hidden={comps.length - filteredComps.length} />
+
+          {/* Main content */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:12}}>
+            {/* Map */}
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid var(--border)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  <span style={{fontSize:13,fontWeight:600}}>{filteredComps.length} listings{filteredComps.length !== comps.length ? ` (of ${comps.length})` : ''}</span>
+                  <span style={{fontSize:11,color:'var(--text-muted)'}}>·</span>
+                  <span style={{fontSize:11,color:'var(--text-muted)'}}>{selectedComps.length} in set</span>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={()=>setShowWidgets(!showWidgets)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:12,cursor:'pointer',color:'var(--text-sec)',fontWeight:500}}>
+                    ⚙ Widgets
+                  </button>
+                  <button onClick={()=>setView('pm')} style={{background:'var(--accent)',border:'none',borderRadius:6,padding:'5px 14px',fontSize:12,cursor:'pointer',color:'#fff',fontWeight:600}}>
+                    PM Setup & Projection →
+                  </button>
+                </div>
+              </div>
+              <div style={{position:'relative'}}>
+                <CompMap comps={filteredComps} selected={selected} onToggle={toggleComp} centerLat={parseFloat(lat)} centerLng={parseFloat(lng)} searchRadius={parseInt(radius)||5000} />
+                {/* Widgets overlay */}
+                {showWidgets && (
+                  <div style={{position:'absolute',top:10,right:10,zIndex:1000}}>
+                    <WidgetsPanel visible={visibleCols} setVisible={setVisibleCols} onClose={()=>setShowWidgets(false)} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid var(--border)'}}>
+                <div style={{fontSize:13,fontWeight:600}}>{selectedComps.length} of {filteredComps.length} selected</div>
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={()=>toggleComp('__all')} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'var(--text-sec)'}}>Select all</button>
+                  <button onClick={()=>toggleComp('__none')} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'var(--text-sec)'}}>Clear</button>
+                </div>
+              </div>
+              <CompTable comps={filteredComps} selected={selected} onToggle={toggleComp} visibleCols={visibleCols} />
+            </div>
+          </div>
+
+          {/* Right filters sidebar — sticky */}
+          <div style={{position:'sticky',top:16,alignSelf:'flex-start'}}>
+            <FiltersPanel filters={filters} setFilters={setFilters} roomTypes={selRoomTypes} setRoomTypes={setSelRoomTypes} amenities={selAmenities} setAmenities={setSelAmenities} availableAmenities={availableAmenities} onApply={handleSearch} onClear={clearFilters} totalCount={comps.length} filteredCount={filteredComps.length} />
+          </div>
+        </div>
+      )}
+
+      {/* ════ PM SETUP ════ */}
+      {view==='pm'&&(
+        <div style={{maxWidth:600,margin:'0 auto'}}>
+          <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:24}}>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Property Management Company</div>
+            <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:20}}>Enter the PM fee structure. These will appear on generated reports.</div>
+
+            <div style={{fontSize:13,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:12}}>Fee Structure</div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14,marginBottom:20}}>
+              <div>
+                <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Per Stay Fee</label>
+                <div style={{position:'relative'}}>
+                  <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:14}}>$</span>
+                  <input type="number" step="0.01" value={pmCompany.perStayFee} onChange={e=>updatePM('perStayFee',e.target.value)} placeholder="e.g. 150" style={{...inputStyle,paddingLeft:24}} />
+                </div>
+                <div style={{fontSize:10,color:'var(--text-muted)',marginTop:3}}>Cleaning fee, etc.</div>
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Per Night Fee</label>
+                <div style={{position:'relative'}}>
+                  <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:14}}>$</span>
+                  <input type="number" step="0.01" value={pmCompany.perNightFee} onChange={e=>updatePM('perNightFee',e.target.value)} placeholder="e.g. 25" style={{...inputStyle,paddingLeft:24}} />
+                </div>
+                <div style={{fontSize:10,color:'var(--text-muted)',marginTop:3}}>Nightly surcharge</div>
+              </div>
+              <div>
+                <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>% Fee</label>
+                <div style={{position:'relative'}}>
+                  <input type="number" step="0.1" value={pmCompany.pctFee} onChange={e=>updatePM('pctFee',e.target.value)} placeholder="e.g. 20" style={{...inputStyle,paddingRight:28}} />
+                  <span style={{position:'absolute',right:10,top:9,color:'var(--text-muted)',fontSize:14}}>%</span>
+                </div>
+                <div style={{fontSize:10,color:'var(--text-muted)',marginTop:3}}>% of gross revenue</div>
+              </div>
+            </div>
+
+            {/* Summary preview */}
+            {(pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee) && (
+              <div style={{background:'var(--accent-bg)',border:'1px solid var(--accent-light)',borderRadius:10,padding:14,marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:6}}>Fee Summary</div>
+                <div style={{fontSize:13,color:'var(--text)'}}>
+                  {pmCompany.name && <span style={{fontWeight:600}}>{pmCompany.name}: </span>}
+                  {[
+                    pmCompany.perStayFee && `$${pmCompany.perStayFee}/stay`,
+                    pmCompany.perNightFee && `$${pmCompany.perNightFee}/night`,
+                    pmCompany.pctFee && `${pmCompany.pctFee}% of revenue`,
+                  ].filter(Boolean).join(' + ') || 'No fees entered'}
+                </div>
+              </div>
+            )}
+
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setView('comps')} style={{flex:1,padding:12,border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:14,fontWeight:600}}>
+                ← Back to Comps
+              </button>
+              <button onClick={()=>setView('projection')} style={{flex:1,padding:12,border:'none',borderRadius:8,background:'var(--accent)',color:'#fff',cursor:'pointer',fontSize:14,fontWeight:600,opacity:selectedComps.length>=MIN_COMPS?1:0.4}} disabled={selectedComps.length<MIN_COMPS}>
+                {selectedComps.length<MIN_COMPS ? `Need ${MIN_COMPS - selectedComps.length} more comp(s)` : 'View Projection →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════ PROJECTION ════ */}
+      {view==='projection'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          {/* Navigation bar */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <button onClick={()=>setView('pm')} style={{display:'flex',alignItems:'center',gap:6,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
+              ← Back to PM Setup
+            </button>
+            <div style={{fontSize:12,color:'var(--text-muted)',display:'flex',alignItems:'center',gap:8}}>
+              {selectedComps.length} comps selected
+              {pmCompany.name && ` · PM: ${pmCompany.name}`}
+              {projection && (
+                <span style={{display:'inline-flex',alignItems:'center',gap:4,background:projection.seasonSource==='market_report'?'rgba(46,160,67,0.1)':'rgba(200,150,50,0.1)',color:projection.seasonSource==='market_report'?'#2ea043':'#c89632',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>
+                  {projection.seasonSource==='market_report' ? '📈 Market Seasonality' : '📉 Generic Seasonality'}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Seasonality diagnostic panel */}
+          {projection && projection.seasonFactors && (
+            <details style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'10px 14px',fontSize:12}}>
+              <summary style={{cursor:'pointer',fontWeight:600,color:'var(--text-sec)',fontSize:12}}>
+                Seasonality Factors — {projection.seasonSource==='market_report' ? `Market Report (ID: ${seasonality?.marketId})` : 'Generic Fallback'}
+              </summary>
+              <div style={{marginTop:10,overflowX:'auto'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,fontFamily:'monospace'}}>
+                  <thead>
+                    <tr style={{borderBottom:'1px solid var(--border)'}}>
+                      <th style={{textAlign:'left',padding:'4px 8px'}}>Metric</th>
+                      {MONTHS.map(m=><th key={m} style={{textAlign:'center',padding:'4px 6px'}}>{m}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[['Revenue',projection.seasonFactors.SEASON_REV],['Occupancy',projection.seasonFactors.SEASON_OCC],['ADR',projection.seasonFactors.SEASON_ADR],['LOS',projection.seasonFactors.SEASON_LOS]].map(([label,arr])=>(
+                      <tr key={label} style={{borderBottom:'1px solid var(--border-light)'}}>
+                        <td style={{padding:'4px 8px',fontWeight:600}}>{label}</td>
+                        {arr.map((v,i)=><td key={i} style={{textAlign:'center',padding:'4px 6px',color:v>1?'#2ea043':v<1?'#c89632':'var(--text)'}}>{v.toFixed(3)}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+
+          {selectedComps.length < MIN_COMPS ? (
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:60,textAlign:'center'}}>
+              <div style={{fontSize:36,marginBottom:10}}>📊</div>
+              <div style={{fontSize:15,fontWeight:600}}>Minimum {MIN_COMPS} comps required</div>
+              <div style={{fontSize:13,color:'var(--text-muted)',marginTop:4}}>You have {selectedComps.length} comp(s) selected. Go back and select at least {MIN_COMPS}.</div>
+              <button onClick={()=>setView('comps')} style={{marginTop:14,padding:'8px 20px',background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer'}}>Select Comps</button>
+            </div>
+          ) : projection ? (() => {
+            /* ── Compute rental-basis summary metrics from base-case monthly data ── */
+            const { SEASON_REV: _SR, SEASON_OCC: _SO, SEASON_LOS: _SL } = projection.seasonFactors;
+            const _pn = parseFloat(pmCompany.perNightFee) || 0;
+            const _ps = parseFloat(pmCompany.perStayFee) || 0;
+            const _pp = parseFloat(pmCompany.pctFee) || 0;
+            const _hasFees = _pn || _ps || _pp;
+            const _computeRentalFromGross = (annualGross) => {
+              if (!_hasFees || !projection.medOcc || !projection.medLOS) return annualGross;
+              let totalFees = 0;
+              MONTHS.forEach((m, i) => {
+                const monthRev = annualGross * _SR[i] / 12;
+                const occ = Math.min(projection.medOcc * _SO[i], 1.0);
+                const occNights = Math.round(DAYS_IN_MONTH[i] * occ);
+                const los = projection.medLOS * _SL[i];
+                const stays = los > 0 ? occNights / los : 0;
+                totalFees += occNights * _pn + stays * _ps + monthRev * (_pp / 100);
+              });
+              return annualGross - totalFees;
+            };
+            /* Base case = 100% of median, so base rental revenue IS median rental revenue */
+            const baseSc = projection.monthly.base;
+            const _baseMonthly = baseSc.slice(0, 12).map(row => {
+              const occNights = row.occupiedNights || 0;
+              const los = row.los || 1;
+              const stays = los > 0 ? occNights / los : 0;
+              const fees = occNights * _pn + stays * _ps + row.revenue * (_pp / 100);
+              return { rev: row.revenue, occ: row.occupancy, occNights, netRev: row.revenue - fees };
+            });
+            const _medianRentalRev = _baseMonthly.reduce((s, d) => s + d.netRev, 0);
+            const _totalOccNights = _baseMonthly.reduce((s, d) => s + d.occNights, 0);
+            const _medianRentalADR = _totalOccNights > 0 ? _medianRentalRev / _totalOccNights : 0;
+            const _medianRevPAR = _medianRentalADR * (projection.medOcc || 0);
+            /* Rental revenue range: apply same fee ratio to P25/P75 */
+            const _p25Rental = _computeRentalFromGross(projection.p25Revenue);
+            const _p75Rental = _computeRentalFromGross(projection.p75Revenue);
+
+            /* Per-scenario rental metrics for the scenario cards */
+            const _scenarioRental = {};
+            ['conservative','base','aggressive'].forEach(key => {
+              const sc = projection.monthly[key];
+              const mRows = sc.slice(0,12).map(row => {
+                const on = row.occupiedNights || 0;
+                const ls = row.los || 1;
+                const st = ls > 0 ? on / ls : 0;
+                const fees = on * _pn + st * _ps + row.revenue * (_pp / 100);
+                return { netRev: row.revenue - fees, occNights: on, occ: row.occupancy };
+              });
+              const annRental = mRows.reduce((s,d) => s + d.netRev, 0);
+              const totON = mRows.reduce((s,d) => s + d.occNights, 0);
+              const rentalADR = totON > 0 ? annRental / totON : 0;
+              _scenarioRental[key] = { annual: Math.round(annRental), adr: Math.round(rentalADR) };
+            });
+
+            return (
+            <>
+              {/* Market Summary */}
+              <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:20}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                  <div style={{fontSize:15,fontWeight:700}}>Market Summary — {projection.compCount} comps</div>
+                  {pmCompany.name && (
+                    pmCompany.website
+                      ? <a href={pmCompany.website.startsWith('http')?pmCompany.website:`https://${pmCompany.website}`} target="_blank" rel="noopener noreferrer" style={{background:'var(--accent-bg)',padding:'4px 12px',borderRadius:6,fontSize:12,fontWeight:600,color:'var(--accent)',textDecoration:'none'}}>{pmCompany.name} ↗</a>
+                      : <div style={{background:'var(--accent-bg)',padding:'4px 12px',borderRadius:6,fontSize:12,fontWeight:600,color:'var(--accent)'}}>{pmCompany.name}</div>
+                  )}
+                </div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
+                  <Stat label="Median Rental Revenue" value={fmtUSD(Math.round(_medianRentalRev))} sub="Net of PM fees" color="var(--green)" />
+                  <Stat label="Median ADR" value={fmtUSD(Math.round(_medianRentalADR))} sub="Rental basis" color="var(--blue)" />
+                  <Stat label="Median Occupancy" value={fmtPct(projection.medOcc)} color="var(--yellow)" />
+                  <Stat label="Median RevPAR" value={fmtUSD(Math.round(_medianRevPAR))} color="var(--accent)" />
+                  <Stat label="Median LoS" value={projection.medLOS?projection.medLOS.toFixed(1)+' nights':'—'} />
+                  <Stat label="Avg Rating" value={projection.avgRating?projection.avgRating.toFixed(2):'—'} sub={`${fmt(projection.avgReviews,0)} reviews`} />
+                  <Stat label="Rental Revenue Range" value={`${fmtUSD(Math.round(_p25Rental))} – ${fmtUSD(Math.round(_p75Rental))}`} sub="P25 – P75" />
+                </div>
+              </div>
+
+              {/* PM Fee Summary */}
+              {(pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee) && (
+                <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:16,display:'flex',gap:16,alignItems:'center',flexWrap:'wrap'}}>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--accent)'}}>PM Fees:</div>
+                  {pmCompany.perStayFee && <div style={{background:'var(--surface2)',borderRadius:6,padding:'4px 12px',fontSize:12}}><b>${pmCompany.perStayFee}</b>/stay <span style={{color:'var(--text-muted)'}}>(cleaning fee, etc.)</span></div>}
+                  {pmCompany.perNightFee && <div style={{background:'var(--surface2)',borderRadius:6,padding:'4px 12px',fontSize:12}}><b>${pmCompany.perNightFee}</b>/night</div>}
+                  {pmCompany.pctFee && <div style={{background:'var(--surface2)',borderRadius:6,padding:'4px 12px',fontSize:12}}><b>{pmCompany.pctFee}%</b> of revenue</div>}
+                </div>
+              )}
+
+              {/* Annual Revenue Scenarios */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+                {[
+                  {key:'conservative', label:'Conservative', color:'var(--yellow)', icon:'🛡️', desc:'85% of median'},
+                  {key:'base', label:'Base Case', color:'var(--green)', icon:'📊', desc:'Median comp data'},
+                  {key:'aggressive', label:'Aggressive', color:'var(--accent)', icon:'🚀', desc:'115% of median'},
+                ].map(s=>(
+                  <div key={s.key} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:20,textAlign:'center'}}>
+                    <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
+                    <div style={{fontSize:13,fontWeight:700,marginBottom:2}}>{s.label}</div>
+                    <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:10}}>{s.desc}</div>
+                    <div style={{fontSize:26,fontWeight:800,color:s.color}}>{fmtUSD(_scenarioRental[s.key].annual)}</div>
+                    <div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>Annual Rental Revenue</div>
+                    <div style={{fontSize:14,fontWeight:600,color:s.color,marginTop:6}}>{fmtUSD(Math.round(_scenarioRental[s.key].annual/12))}/mo</div>
+                    <div style={{display:'flex',justifyContent:'center',gap:12,marginTop:8,fontSize:11,color:'var(--text-muted)'}}>
+                      <span>ADR: <b style={{color:'var(--text)'}}>{fmtUSD(_scenarioRental[s.key].adr)}</b></span>
+                      <span>Occ: <b style={{color:'var(--text)'}}>{fmtPct(projection.monthly[s.key].avgOcc)}</b></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Full Monthly Metrics Tables (transposed: months as columns, KPIs as rows) ── */}
+              {['conservative','base','aggressive'].map((scenario) => {
+                const colors = {conservative:'var(--yellow)',base:'var(--green)',aggressive:'var(--accent)'};
+                const labels = {conservative:'Conservative',base:'Base Case',aggressive:'Aggressive'};
+                const icons = {conservative:'🛡️',base:'📊',aggressive:'🚀'};
+                const sc = projection.monthly[scenario];
+                const hasFees = pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee;
+                const perNight = parseFloat(pmCompany.perNightFee) || 0;
+                const perStay = parseFloat(pmCompany.perStayFee) || 0;
+                const pctFee = parseFloat(pmCompany.pctFee) || 0;
+
+                // Compute derived metrics for each month
+                const derived = sc.slice(0,12).map(row => {
+                  const grossRev = row.revenue;
+                  const occNights = row.occupiedNights || 0;
+                  const avgLos = row.los || 1;
+                  const stays = avgLos > 0 ? occNights / avgLos : 0;
+                  const nightFees = occNights * perNight;
+                  const stayFees = stays * perStay;
+                  const revFees = grossRev * (pctFee / 100);
+                  const totalFees = nightFees + stayFees + revFees;
+                  const netRev = grossRev - totalFees;
+                  const rentalADR = occNights > 0 ? netRev / occNights : 0;
+                  const rentalRevPAR = rentalADR * (row.occupancy || 0);
+                  return { grossRev, occNights, avgLos, totalFees, netRev, nightFees, stayFees, revFees, rentalADR, rentalRevPAR };
+                });
+                const annualGross = derived.reduce((s,d)=>s+d.grossRev, 0);
+                const annualOccNights = derived.reduce((s,d)=>s+d.occNights, 0);
+                const annualFees = derived.reduce((s,d)=>s+d.totalFees, 0);
+                const annualNet = annualGross - annualFees;
+                const annualRentalADR = annualOccNights > 0 ? annualNet / annualOccNights : 0;
+                const annualRentalRevPAR = annualRentalADR * (sc.avgOcc || 0);
+
+                const thM = {padding:'8px 6px',textAlign:'right',fontSize:10,fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.03em',borderBottom:'2px solid var(--border)',whiteSpace:'nowrap',minWidth:62};
+                const tdM = {padding:'7px 6px',fontSize:11,textAlign:'right',borderBottom:'1px solid var(--border-light)',fontWeight:500,whiteSpace:'nowrap'};
+                const labelTd = {padding:'7px 10px',fontSize:11,fontWeight:600,textAlign:'left',borderBottom:'1px solid var(--border-light)',whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)',zIndex:1};
+                const totalTh = {...thM, borderLeft:'2px solid var(--border)', fontWeight:800, fontSize:11};
+                const totalTd = {...tdM, borderLeft:'2px solid var(--border)', fontWeight:700};
+
+                return (
+                  <div key={scenario} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+                    <div style={{padding:'14px 20px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span>{icons[scenario]}</span>
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700}}>{labels[scenario]} — Monthly Breakdown</div>
+                          <div style={{fontSize:11,color:'var(--text-muted)'}}>Annual Total: {fmtUSD(annualGross)}{hasFees ? ` · Rental: ${fmtUSD(annualNet)}` : ''}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',minWidth:900}}>
+                        <thead>
+                          <tr style={{background:'var(--surface2)'}}>
+                            <th style={{...thM,textAlign:'left',position:'sticky',left:0,background:'var(--surface2)',zIndex:2,minWidth:120}}></th>
+                            {MONTHS.map(m=><th key={m} style={thM}>{m}</th>)}
+                            <th style={totalTh}>Annual</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* Total ADR row */}
+                          <tr>
+                            <td style={labelTd}>Total ADR</td>
+                            {sc.slice(0,12).map((row,i)=><td key={i} style={tdM}>{fmtUSD(row.adr)}</td>)}
+                            <td style={totalTd}>{fmtUSD(sc.avgADR)}</td>
+                          </tr>
+                          {/* Occupancy row */}
+                          <tr>
+                            <td style={labelTd}>Occupancy</td>
+                            {sc.slice(0,12).map((row,i)=><td key={i} style={tdM}>{row.occupancy!=null?(row.occupancy*100).toFixed(1)+'%':'—'}</td>)}
+                            <td style={totalTd}>{fmtPct(sc.avgOcc)}</td>
+                          </tr>
+                          {/* Occupied Nights row */}
+                          <tr>
+                            <td style={labelTd}>Occupied Nights</td>
+                            {derived.map((d,i)=><td key={i} style={tdM}>{d.occNights}</td>)}
+                            <td style={totalTd}>{annualOccNights}</td>
+                          </tr>
+                          {/* Avg LoS row */}
+                          <tr>
+                            <td style={labelTd}>Avg LoS</td>
+                            {sc.slice(0,12).map((row,i)=><td key={i} style={tdM}>{row.los!=null?row.los.toFixed(1):'—'}</td>)}
+                            <td style={totalTd}>{sc.avgLOS?sc.avgLOS.toFixed(1):'—'}</td>
+                          </tr>
+                          {/* Total Revenue row (bold separator) */}
+                          <tr style={{background:'var(--surface2)'}}>
+                            <td style={{...labelTd,fontWeight:700,color:colors[scenario],borderTop:'2px solid var(--border)',background:'var(--surface2)'}}>Total Revenue</td>
+                            {derived.map((d,i)=><td key={i} style={{...tdM,fontWeight:700,color:colors[scenario],borderTop:'2px solid var(--border)'}}>{fmtUSD(d.grossRev)}</td>)}
+                            <td style={{...totalTd,fontWeight:800,color:colors[scenario],borderTop:'2px solid var(--border)'}}>{fmtUSD(annualGross)}</td>
+                          </tr>
+                          {/* Fee rows — only show if PM fees configured */}
+                          {hasFees && <>
+                            <tr>
+                              <td style={{...labelTd,color:'var(--text-muted)',fontStyle:'italic',fontSize:10}}>PM Fees: Per Night</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,color:'var(--text-muted)',fontSize:10}}>({fmtUSD(Math.round(d.nightFees))})</td>)}
+                              <td style={{...totalTd,color:'var(--text-muted)',fontSize:10}}>({fmtUSD(Math.round(derived.reduce((s,d)=>s+d.nightFees,0)))})</td>
+                            </tr>
+                            <tr>
+                              <td style={{...labelTd,color:'var(--text-muted)',fontStyle:'italic',fontSize:10}}>PM Fees: Per Stay</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,color:'var(--text-muted)',fontSize:10}}>({fmtUSD(Math.round(d.stayFees))})</td>)}
+                              <td style={{...totalTd,color:'var(--text-muted)',fontSize:10}}>({fmtUSD(Math.round(derived.reduce((s,d)=>s+d.stayFees,0)))})</td>
+                            </tr>
+                            <tr>
+                              <td style={{...labelTd,color:'var(--text-muted)',fontStyle:'italic',fontSize:10}}>PM Fees: % Revenue</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,color:'var(--text-muted)',fontSize:10}}>({fmtUSD(Math.round(d.revFees))})</td>)}
+                              <td style={{...totalTd,color:'var(--text-muted)',fontSize:10}}>({fmtUSD(Math.round(derived.reduce((s,d)=>s+d.revFees,0)))})</td>
+                            </tr>
+                            <tr style={{background:'var(--surface2)'}}>
+                              <td style={{...labelTd,fontWeight:700,borderTop:'2px solid var(--border)',background:'var(--surface2)'}}>Total Fees</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,fontWeight:600,borderTop:'2px solid var(--border)'}}>({fmtUSD(Math.round(d.totalFees))})</td>)}
+                              <td style={{...totalTd,fontWeight:700,borderTop:'2px solid var(--border)'}}>({fmtUSD(Math.round(annualFees))})</td>
+                            </tr>
+                            <tr style={{background:'var(--surface2)'}}>
+                              <td style={{...labelTd,fontWeight:700,color:colors[scenario],background:'var(--surface2)'}}>Rental Revenue</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,fontWeight:700,color:colors[scenario]}}>{fmtUSD(Math.round(d.netRev))}</td>)}
+                              <td style={{...totalTd,fontWeight:800,color:colors[scenario]}}>{fmtUSD(Math.round(annualNet))}</td>
+                            </tr>
+                            <tr>
+                              <td style={{...labelTd,fontSize:10}}>ADR</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,fontSize:10}}>{fmtUSD(Math.round(d.rentalADR))}</td>)}
+                              <td style={{...totalTd,fontSize:10}}>{fmtUSD(Math.round(annualRentalADR))}</td>
+                            </tr>
+                            <tr>
+                              <td style={{...labelTd,fontSize:10}}>RevPAR</td>
+                              {derived.map((d,i)=><td key={i} style={{...tdM,fontSize:10}}>{fmtUSD(Math.round(d.rentalRevPAR))}</td>)}
+                              <td style={{...totalTd,fontSize:10}}>{fmtUSD(Math.round(annualRentalRevPAR))}</td>
+                            </tr>
+                          </>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* ── Generate Reports Section ── */}
+              <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:20}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700}}>Generate Owner Reports</div>
+                    <div style={{fontSize:12,color:'var(--text-muted)',marginTop:2}}>Create flyers to send to property owners</div>
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                  {[
+                    {type:'owner-brochure', label:'Owner Brochure', desc:'2-page cover + summary'},
+                    {type:'full-report', label:'Full Report', desc:'4-page with projections + comp detail'},
+                  ].map(t=>(
+                    <button key={t.type} onClick={()=>{
+                      setShowReportModal(t.type);
+                    }} style={{flex:'1 1 180px',display:'flex',alignItems:'center',gap:12,padding:'14px 18px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,cursor:'pointer',textAlign:'left',transition:'all .15s'}}>
+                      <span style={{fontSize:28}}>{t.icon}</span>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600}}>{t.label}</div>
+                        <div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>{t.desc}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:8,marginTop:12,alignItems:'center'}}>
+                  <button onClick={()=>setView('reports')} style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontSize:12,fontWeight:600}}>
+                    View All Reports →
+                  </button>
+                  <span style={{fontSize:11,color:'var(--text-muted)'}}>·</span>
+                  <span style={{fontSize:11,color:'var(--text-muted)'}}>{reports.length} report(s) saved</span>
+                </div>
+              </div>
+            </>
+            );
+          })() : (
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:60,textAlign:'center'}}>
+              <div style={{fontSize:36,marginBottom:10}}>📊</div>
+              <div style={{fontSize:15,fontWeight:600}}>No projection data</div>
+              <div style={{fontSize:13,color:'var(--text-muted)',marginTop:4}}>Search for comps and select at least {MIN_COMPS} to generate projections.</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════ REPORTS ════ */}
+      {view==='reports'&&(
+        <ReportsPage reports={reports} onRefresh={loadReports} projection={projection} assumptions={assumptions} comps={selectedComps} pmCompany={pmCompany} />
+      )}
+
+      {/* Report generation modal from Projection page */}
+      {showReportModal && (
+        <GenerateReportModal
+          onClose={()=>setShowReportModal(false)}
+          propertyAddress={address || `${lat}, ${lng}`}
+          pmCompany={pmCompany}
+          comps={selectedComps}
+          onGenerate={async (info)=>{
+            try {
+              const mergedInfo = {...info, reportType: typeof showReportModal === 'string' ? showReportModal : info.reportType};
+              await generatePDF(mergedInfo.reportType, projection, assumptions, comps, {
+                owner_name: mergedInfo.ownerName, owner_email: mergedInfo.ownerEmail,
+                owner_address: mergedInfo.ownerAddress, property_address: address || `${lat}, ${lng}`,
+                report_name: mergedInfo.reportName
+              }, pmCompany, {
+                salesRepName: mergedInfo.salesRepName,
+                salesRepPhotoData: mergedInfo.salesRepPhotoData,
+                brandColor: mergedInfo.brandColor,
+                companyLogoData: mergedInfo.companyLogoData,
+                brandImageData: mergedInfo.brandImageData,
+                propertyImageData: mergedInfo.propertyImageData,
+                companyBlurb: mergedInfo.companyBlurb,
+                diffBlurb: mergedInfo.diffBlurb,
+                salesRepCommentary: mergedInfo.salesRepCommentary,
+                selectedComps: mergedInfo.selectedComps,
+                companyName: mergedInfo.companyName,
+                reportName: mergedInfo.reportName
+              });
+              await fetch('/api/reports', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  name: mergedInfo.reportName, owner_name: mergedInfo.ownerName,
+                  owner_email: mergedInfo.ownerEmail, owner_address: mergedInfo.ownerAddress,
+                  property_address: address || `${lat}, ${lng}`,
+                  value: mergedInfo.value, report_type: mergedInfo.reportType,
+                  report_data: { projection, assumptions, pmCompany }, status: 'generated'
+                })
+              });
+              setShowReportModal(false);
+              loadReports();
+            } catch(err) {
+              console.error('PDF generation error:', err);
+              alert('Error generating PDF: ' + err.message);
+            }
+          }}
+        />
+      )}
+
+      {/* ════ HISTORY ════ */}
+      {view==='history'&&(
+        <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+          <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:15,fontWeight:700}}>Search History</div>
+              <div style={{fontSize:12,color:'var(--text-muted)',marginTop:2}}>{searchHistory.length} saved searches</div>
+            </div>
+          </div>
+          {searchHistory.length === 0 ? (
+            <div style={{padding:60,textAlign:'center'}}>
+              <div style={{fontSize:36,marginBottom:10}}>🕐</div>
+              <div style={{fontSize:15,fontWeight:600}}>No searches yet</div>
+              <div style={{fontSize:13,color:'var(--text-muted)',marginTop:4}}>Your searches will be saved automatically.</div>
+            </div>
+          ) : (
+            <div>
+              {searchHistory.map(s => (
+                <div key={s.id} onClick={()=>loadSavedSearch(s.id)}
+                  style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--border-light)',cursor:'pointer',transition:'background .1s'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <div style={{width:40,height:40,borderRadius:8,background:'var(--accent-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📍</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.address || `${s.lat?.toFixed(4)}, ${s.lng?.toFixed(4)}`}</div>
+                    <div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>
+                      {new Date(s.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}
+                      {' · '}{s.comp_count} comps{s.radius ? ` · ${(s.radius/1000).toFixed(1)}km radius` : ''}
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
+                    <span style={{background:'var(--accent-bg)',color:'var(--accent)',padding:'3px 10px',borderRadius:5,fontSize:11,fontWeight:600}}>{s.comp_count} comps</span>
+                    <button onClick={(e)=>deleteSavedSearch(s.id,e)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:14,padding:4}} title="Delete">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,690 @@
+#!/usr/bin/env python3
+"""
+Wheelhouse Underwriting Tool — Local Server
+
+Setup:
+    pip install -r requirements.txt
+    cp .env.example .env        # then edit with your real keys
+    python server.py
+
+Open: http://localhost:8000
+"""
+import os
+import io
+import json
+import sqlite3
+from datetime import datetime
+from flask import Flask, request, jsonify, send_file, g
+import re
+import requests as req
+from collections import Counter
+
+# ── Load .env if present ──
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(env_path):
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
+app = Flask(__name__)
+BASE = "https://api.usewheelhouse.com/ss_api/v1/comp_set"
+MR_BASE = "https://api.usewheelhouse.com/ss_api/v1/market_report"
+DB_PATH = os.path.join("/tmp", "wh_underwriting.db")
+
+
+# ── SQLite helpers ──
+def get_db():
+    if "db" not in g:
+        g.db = sqlite3.connect(DB_PATH)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(exc):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    db = sqlite3.connect(DB_PATH)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS searches (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at  TEXT NOT NULL,
+            address     TEXT,
+            lat         REAL,
+            lng         REAL,
+            radius      INTEGER,
+            filters     TEXT,
+            comp_count  INTEGER,
+            results     TEXT,
+            notes       TEXT
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS reports (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at      TEXT NOT NULL,
+            name            TEXT NOT NULL,
+            owner_name      TEXT,
+            owner_email     TEXT,
+            owner_address   TEXT,
+            property_address TEXT,
+            value           TEXT,
+            report_type     TEXT NOT NULL,
+            report_data     TEXT,
+            view_count      INTEGER DEFAULT 0,
+            notes           TEXT,
+            status          TEXT DEFAULT 'draft'
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS report_templates (
+            id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at              TEXT NOT NULL,
+            template_name           TEXT NOT NULL,
+            company_name            TEXT,
+            company_blurb           TEXT,
+            diff_blurb              TEXT,
+            brand_color             TEXT,
+            sales_rep_name          TEXT,
+            company_logo            TEXT,
+            brand_image             TEXT,
+            sales_rep_photo         TEXT
+        )
+    """)
+    db.commit()
+    db.close()
+
+
+def get_headers():
+    """Get API headers — prefer request headers, fall back to env vars."""
+    return {
+        "X-Integration-Api-Key": request.headers.get(
+            "X-Integration-Api-Key",
+            os.environ.get("WHEELHOUSE_INTEGRATION_KEY", ""),
+        ),
+        "X-User-API-Key": request.headers.get(
+            "X-User-API-Key",
+            os.environ.get("WHEELHOUSE_USER_KEY", ""),
+        ),
+    }
+
+
+# ── Page routes ──
+@app.route("/")
+def index():
+    return send_file(os.path.join(os.path.dirname(__file__), "index.html"))
+
+
+# ── API proxy routes ──
+def _try_nominatim(address):
+    """Try OpenStreetMap Nominatim geocoder."""
+    r = req.get(
+        "https://nominatim.openstreetmap.org/search",
+        params={"format": "json", "q": address, "limit": 5, "addressdetails": 1},
+        headers={"User-Agent": "WheelhouseUnderwriting/1.0 (john@usewheelhouse.com)"},
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def _try_census(address):
+    """Fallback: US Census Bureau geocoder (excellent US address coverage)."""
+    r = req.get(
+        "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress",
+        params={"address": address, "benchmark": "Public_AR_Current", "format": "json"},
+        timeout=10,
+    )
+    r.raise_for_status()
+    matches = r.json().get("result", {}).get("addressMatches", [])
+    if not matches:
+        return []
+    # Convert to Nominatim-compatible format
+    return [
+        {
+            "lat": str(m["coordinates"]["y"]),
+            "lon": str(m["coordinates"]["x"]),
+            "display_name": m.get("matchedAddress", address),
+        }
+        for m in matches
+    ]
+
+
+@app.route("/api/geocode")
+def geocode():
+    address = request.args.get("q", "")
+    try:
+        # 1) Try Nominatim
+        data = _try_nominatim(address)
+        if data:
+            return jsonify(data)
+        # 2) Retry Nominatim with simplified query
+        parts = [p.strip() for p in address.split(",")]
+        if len(parts) >= 2:
+            data = _try_nominatim(", ".join(parts[:2]))
+            if data:
+                return jsonify(data)
+        # 3) Fallback to US Census geocoder
+        print(f"  ℹ Nominatim miss — trying Census geocoder for: {address}")
+        census = _try_census(address)
+        if census:
+            return jsonify(census)
+        return jsonify([])
+    except Exception as e:
+        print(f"  ⚠ Geocode error: {e}")
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/brand-colors")
+def brand_colors():
+    """Extract brand/accent colors from a website's HTML/CSS."""
+    url = request.args.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    if not url.startswith("http"):
+        url = "https://" + url
+    try:
+        r = req.get(url, timeout=8, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; WheelhouseBot/1.0)"
+        })
+        html = r.text[:200000]  # limit to 200k chars
+
+        # Collect hex colors from inline styles and <style> blocks
+        hex6 = re.findall(r'#([0-9a-fA-F]{6})\b', html)
+        hex3 = re.findall(r'#([0-9a-fA-F]{3})\b', html)
+        # Expand 3-char hex to 6-char
+        all_hex = [h.lower() for h in hex6]
+        all_hex += [f"{h[0]}{h[0]}{h[1]}{h[1]}{h[2]}{h[2]}".lower() for h in hex3]
+
+        # Also grab rgb()/rgba()
+        rgb_matches = re.findall(r'rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)', html)
+        for r_, g_, b_ in rgb_matches:
+            all_hex.append(f"{int(r_):02x}{int(g_):02x}{int(b_):02x}")
+
+        # Filter out near-white, near-black, and pure grays
+        def is_brand(h):
+            r_, g_, b_ = int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+            brightness = (r_ * 299 + g_ * 587 + b_ * 114) / 1000
+            if brightness > 240 or brightness < 20:
+                return False
+            # filter pure grays (low saturation)
+            mx, mn = max(r_, g_, b_), min(r_, g_, b_)
+            if mx - mn < 25:
+                return False
+            return True
+
+        filtered = [h for h in all_hex if is_brand(h)]
+        counts = Counter(filtered)
+        top = counts.most_common(5)  # top 5 most-used brand colors
+        colors = [{"hex": f"#{h}", "count": c,
+                    "rgb": [int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16)]}
+                   for h, c in top]
+        return jsonify({"url": url, "colors": colors})
+    except Exception as e:
+        print(f"  ⚠ Brand color extraction error: {e}")
+        return jsonify({"error": str(e), "colors": []}), 200
+
+
+@app.route("/api/autocomplete")
+def autocomplete():
+    """Fast address suggestions — ArcGIS suggest (single request, no coord resolution)."""
+    q = request.args.get("q", "").strip()
+    if len(q) < 3:
+        return jsonify([])
+    try:
+        r = req.get(
+            "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest",
+            params={"text": q, "f": "json", "countryCode": "USA", "maxSuggestions": 6},
+            timeout=3,
+        )
+        if not r.ok:
+            return jsonify([])
+        suggestions = r.json().get("suggestions", [])
+        return jsonify([{"display_name": s.get("text", ""), "magicKey": s.get("magicKey", "")}
+                        for s in suggestions if s.get("text")])
+    except Exception as e:
+        print(f"  Autocomplete error: {e}")
+        return jsonify([])
+
+
+@app.route("/api/resolve-address")
+def resolve_address():
+    """Resolve a selected suggestion to lat/lon using its magicKey."""
+    text = request.args.get("text", "").strip()
+    magic = request.args.get("magicKey", "").strip()
+    if not text:
+        return jsonify({"error": "missing text"}), 400
+    try:
+        params = {"SingleLine": text, "f": "json", "maxLocations": 1, "countryCode": "USA"}
+        if magic:
+            params["magicKey"] = magic
+        r = req.get(
+            "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates",
+            params=params, timeout=3,
+        )
+        if r.ok:
+            cands = r.json().get("candidates", [])
+            if cands:
+                loc = cands[0].get("location", {})
+                return jsonify({
+                    "display_name": cands[0].get("address", text),
+                    "lat": str(loc.get("y", "")),
+                    "lon": str(loc.get("x", "")),
+                })
+        return jsonify({"error": "no results"}), 404
+    except Exception as e:
+        print(f"  Resolve error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/market-report/markets")
+def market_report_markets():
+    """List available markets for a country (Market Report API)."""
+    headers = {"X-Integration-Api-Key": os.environ.get("WHEELHOUSE_MARKET_REPORT_KEY", "")}
+    params = {k: v for k, v in request.args.items()}
+    if "country_code" not in params:
+        params["country_code"] = "US"
+    try:
+        r = req.get(f"{MR_BASE}/", headers=headers, params=params, timeout=10)
+        return (r.text, r.status_code, {"Content-Type": "application/json"})
+    except Exception as e:
+        print(f"  ⚠ Market report markets error: {e}")
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/market-report/<market_id>/time-series")
+def market_report_time_series(market_id):
+    """Fetch daily time-series data for a market (Market Report API).
+
+    Metrics: occupancy, available_rooms, asking_rate, nightly_rate, revpar, revenue, lead_time
+    Filters: start_date, end_date, bedrooms (0,1,2,3,4+), performance (low,average,high), property_type
+    """
+    headers = {"X-Integration-Api-Key": os.environ.get("WHEELHOUSE_MARKET_REPORT_KEY", "")}
+    # Use to_dict(flat=False) to preserve multi-value params like metric=occupancy&metric=nightly_rate
+    params = []
+    for k, values in request.args.lists():
+        for v in values:
+            params.append((k, v))
+    try:
+        print(f"  [MR] time-series market={market_id} params={params}")
+        r = req.get(f"{MR_BASE}/{market_id}/time_series", headers=headers, params=params, timeout=15)
+        print(f"  [MR] time-series response: {r.status_code} {r.text[:300]}")
+        return (r.text, r.status_code, {"Content-Type": "application/json"})
+    except Exception as e:
+        print(f"  ⚠ Market report time-series error: {e}")
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/market-report/<market_id>/distribution")
+def market_report_distribution(market_id):
+    """Fetch monthly metric distributions for a market (Market Report API)."""
+    headers = {"X-Integration-Api-Key": os.environ.get("WHEELHOUSE_MARKET_REPORT_KEY", "")}
+    params = {k: v for k, v in request.args.items()}
+    try:
+        r = req.get(f"{MR_BASE}/{market_id}/distribution", headers=headers, params=params, timeout=15)
+        return (r.text, r.status_code, {"Content-Type": "application/json"})
+    except Exception as e:
+        print(f"  ⚠ Market report distribution error: {e}")
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/candidates")
+def candidates():
+    headers = get_headers()
+    params = {k: v for k, v in request.args.items()}
+    r = req.get(f"{BASE}/candidates", headers=headers, params=params)
+    # Debug: log source fields from API response
+    try:
+        data = r.json()
+        items = data if isinstance(data, list) else data.get("listings") or data.get("results") or data.get("candidates") or []
+        if items and len(items) > 0:
+            sample = items[0]
+            sources = set(x.get("source") for x in items if "source" in x)
+            print(f"  [DEBUG] {len(items)} comps returned. Sources: {sources}")
+            print(f"  [DEBUG] Sample comp keys: {list(sample.keys())[:20]}")
+    except Exception as e:
+        print(f"  [DEBUG] Could not parse response: {e}")
+    return (r.text, r.status_code, {"Content-Type": "application/json"})
+
+
+@app.route("/api/candidates/listing/<listing_id>")
+def listing(listing_id):
+    headers = get_headers()
+    r = req.get(f"{BASE}/candidates/listing/{listing_id}", headers=headers)
+    return (r.text, r.status_code, {"Content-Type": "application/json"})
+
+
+@app.route("/api/candidates/listings")
+def listings():
+    headers = get_headers()
+    params = {k: v for k, v in request.args.items()}
+    r = req.get(f"{BASE}/candidates/listings", headers=headers, params=params)
+    return (r.text, r.status_code, {"Content-Type": "application/json"})
+
+
+@app.route("/api/export-comps", methods=["POST"])
+def export_comps():
+    """Export comp data as Excel — receives full comp objects from the client."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        return jsonify({"error": "openpyxl not installed. Run: pip install openpyxl"}), 500
+
+    body = request.get_json(force=True)
+    all_comps = body.get("comps", [])
+    if not all_comps:
+        return jsonify({"error": "No comps provided"}), 400
+
+    # Collect all unique keys across comps
+    all_keys = []
+    seen = set()
+    for comp in all_comps:
+        for k in comp.keys():
+            if k not in seen:
+                all_keys.append(k)
+                seen.add(k)
+
+    # Build Excel workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Comp Set Data"
+
+    # Header styling
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="4A4A4A", end_color="4A4A4A", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin_border = Border(
+        left=Side(style="thin", color="DDDDDD"),
+        right=Side(style="thin", color="DDDDDD"),
+        top=Side(style="thin", color="DDDDDD"),
+        bottom=Side(style="thin", color="DDDDDD"),
+    )
+
+    # Write headers
+    for col_idx, key in enumerate(all_keys, 1):
+        cell = ws.cell(row=1, column=col_idx, value=key)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+
+    # Write data rows
+    alt_fill = PatternFill(start_color="F5F5F7", end_color="F5F5F7", fill_type="solid")
+    for row_idx, comp in enumerate(all_comps, 2):
+        for col_idx, key in enumerate(all_keys, 1):
+            val = comp.get(key, "")
+            # Flatten lists/dicts to string
+            if isinstance(val, (list, dict)):
+                val = json.dumps(val)
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.border = thin_border
+            if row_idx % 2 == 0:
+                cell.fill = alt_fill
+
+    # Auto-width columns (capped at 40)
+    for col_idx, key in enumerate(all_keys, 1):
+        max_len = len(str(key))
+        for row_idx in range(2, len(all_comps) + 2):
+            val = ws.cell(row=row_idx, column=col_idx).value
+            if val:
+                max_len = max(max_len, min(len(str(val)), 40))
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = max_len + 3
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+
+    # Save to buffer
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return send_file(buf, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name="comp_set_export.xlsx")
+
+
+# ── Search history routes ──
+@app.route("/api/searches", methods=["GET"])
+def list_searches():
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, created_at, address, lat, lng, radius, filters, comp_count, notes "
+        "FROM searches ORDER BY created_at DESC LIMIT 100"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/searches", methods=["POST"])
+def save_search():
+    data = request.get_json()
+    db = get_db()
+    db.execute(
+        "INSERT INTO searches (created_at, address, lat, lng, radius, filters, comp_count, results, notes) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            datetime.utcnow().isoformat(),
+            data.get("address"),
+            data.get("lat"),
+            data.get("lng"),
+            data.get("radius"),
+            json.dumps(data.get("filters", {})),
+            data.get("comp_count", 0),
+            json.dumps(data.get("results", [])),
+            data.get("notes", ""),
+        ),
+    )
+    db.commit()
+    return jsonify({"ok": True, "id": db.execute("SELECT last_insert_rowid()").fetchone()[0]})
+
+
+@app.route("/api/searches/<int:search_id>")
+def get_search(search_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM searches WHERE id = ?", (search_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    result = dict(row)
+    result["results"] = json.loads(result["results"]) if result["results"] else []
+    result["filters"] = json.loads(result["filters"]) if result["filters"] else {}
+    return jsonify(result)
+
+
+@app.route("/api/searches/<int:search_id>", methods=["DELETE"])
+def delete_search(search_id):
+    db = get_db()
+    db.execute("DELETE FROM searches WHERE id = ?", (search_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/searches/<int:search_id>/notes", methods=["PUT"])
+def update_notes(search_id):
+    data = request.get_json()
+    db = get_db()
+    db.execute("UPDATE searches SET notes = ? WHERE id = ?", (data.get("notes", ""), search_id))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+# ── Reports routes ──
+@app.route("/api/reports", methods=["GET"])
+def list_reports():
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, created_at, name, owner_name, owner_email, owner_address, "
+        "property_address, value, report_type, view_count, notes, status "
+        "FROM reports ORDER BY created_at DESC LIMIT 200"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/reports", methods=["POST"])
+def save_report():
+    data = request.get_json()
+    db = get_db()
+    db.execute(
+        "INSERT INTO reports (created_at, name, owner_name, owner_email, owner_address, "
+        "property_address, value, report_type, report_data, view_count, notes, status) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)",
+        (
+            datetime.utcnow().isoformat(),
+            data.get("name", "Untitled Report"),
+            data.get("owner_name", ""),
+            data.get("owner_email", ""),
+            data.get("owner_address", ""),
+            data.get("property_address", ""),
+            data.get("value", ""),
+            data.get("report_type", "owner-brochure"),
+            json.dumps(data.get("report_data", {})),
+            data.get("notes", ""),
+            data.get("status", "draft"),
+        ),
+    )
+    db.commit()
+    rid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    return jsonify({"ok": True, "id": rid})
+
+
+@app.route("/api/reports/<int:report_id>")
+def get_report(report_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM reports WHERE id = ?", (report_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    result = dict(row)
+    result["report_data"] = json.loads(result["report_data"]) if result["report_data"] else {}
+    # Increment view count
+    db.execute("UPDATE reports SET view_count = view_count + 1 WHERE id = ?", (report_id,))
+    db.commit()
+    return jsonify(result)
+
+
+@app.route("/api/reports/<int:report_id>", methods=["PUT"])
+def update_report(report_id):
+    data = request.get_json()
+    db = get_db()
+    fields = []
+    values = []
+    for key in ["name", "owner_name", "owner_email", "owner_address",
+                "property_address", "value", "notes", "status"]:
+        if key in data:
+            fields.append(f"{key} = ?")
+            values.append(data[key])
+    if fields:
+        values.append(report_id)
+        db.execute(f"UPDATE reports SET {', '.join(fields)} WHERE id = ?", values)
+        db.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/reports/<int:report_id>", methods=["DELETE"])
+def delete_report(report_id):
+    db = get_db()
+    db.execute("DELETE FROM reports WHERE id = ?", (report_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/reports/bulk", methods=["POST"])
+def bulk_create_reports():
+    """Create multiple reports from CSV upload data."""
+    data = request.get_json()
+    rows = data.get("rows", [])
+    report_type = data.get("report_type", "owner-brochure")
+    report_data = data.get("report_data", {})
+    db = get_db()
+    created = []
+    for row in rows:
+        db.execute(
+            "INSERT INTO reports (created_at, name, owner_name, owner_email, owner_address, "
+            "property_address, value, report_type, report_data, view_count, notes, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)",
+            (
+                datetime.utcnow().isoformat(),
+                row.get("name", "Untitled"),
+                row.get("owner_name", ""),
+                row.get("owner_email", ""),
+                row.get("owner_address", ""),
+                row.get("property_address", ""),
+                row.get("value", ""),
+                report_type,
+                json.dumps(report_data),
+                row.get("notes", ""),
+                "draft",
+            ),
+        )
+        created.append(db.execute("SELECT last_insert_rowid()").fetchone()[0])
+    db.commit()
+    return jsonify({"ok": True, "ids": created, "count": len(created)})
+
+
+# ── Report Templates routes ──
+@app.route("/api/report-templates", methods=["GET"])
+def list_templates():
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, created_at, template_name, company_name, company_blurb, diff_blurb, "
+        "brand_color, sales_rep_name FROM report_templates ORDER BY created_at DESC LIMIT 100"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/report-templates", methods=["POST"])
+def save_template():
+    data = request.get_json()
+    db = get_db()
+    db.execute(
+        "INSERT INTO report_templates (created_at, template_name, company_name, company_blurb, "
+        "diff_blurb, brand_color, sales_rep_name, company_logo, brand_image, sales_rep_photo) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            datetime.utcnow().isoformat(),
+            data.get("template_name", "Untitled Template"),
+            data.get("company_name", ""),
+            data.get("company_blurb", ""),
+            data.get("diff_blurb", ""),
+            data.get("brand_color", "#c026d3"),
+            data.get("sales_rep_name", ""),
+            data.get("company_logo", ""),
+            data.get("brand_image", ""),
+            data.get("sales_rep_photo", ""),
+        ),
+    )
+    db.commit()
+    tid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    return jsonify({"ok": True, "id": tid})
+
+
+@app.route("/api/report-templates/<int:template_id>", methods=["GET"])
+def get_template(template_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM report_templates WHERE id = ?", (template_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(dict(row))
+
+
+@app.route("/api/report-templates/<int:template_id>", methods=["DELETE"])
+def delete_template(template_id):
+    db = get_db()
+    db.execute("DELETE FROM report_templates WHERE id = ?", (template_id,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+if __name__ == "__main__":
+    init_db()
+    print()
+    print("  🏠 Wheelhouse Underwriting Tool")
+    print("  ─────────────────────────────────")
+    print("  Open http://localhost:8000")
+    print(f"  Database: {DB_PATH}")
+    print()
+    app.run(host="0.0.0.0", port=8000, debug=True)
