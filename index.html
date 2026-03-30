@@ -80,6 +80,20 @@
   .popup-btn-primary { background: #c026d3; color: #fff; border: none; }
   .popup-btn-primary:hover { background: #a21caf; }
 
+  /* Login screen */
+  .login-overlay { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:48px 40px; text-align:center; max-width:400px; width:90vw; box-shadow:0 4px 24px rgba(0,0,0,0.06); }
+  .login-card h1 { font-size:22px; font-weight:700; margin-bottom:4px; letter-spacing:-0.02em; }
+  .login-card .subtitle { color:var(--text-sec); font-size:13px; margin-bottom:28px; }
+  .login-card input { display:block; width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; color:var(--text); outline:none; margin-bottom:12px; }
+  .login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(217,38,210,0.1); }
+  .login-card .btn-primary { width:100%; padding:11px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; margin-top:4px; }
+  .login-card .btn-primary:hover { background:#a21caf; }
+  .login-card .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+  .login-card .toggle { color:var(--accent); font-size:13px; margin-top:16px; cursor:pointer; font-weight:500; }
+  .login-card .toggle:hover { text-decoration:underline; }
+  .login-error { background:var(--red-bg); color:var(--red); padding:10px 14px; border-radius:8px; margin-top:12px; font-size:13px; text-align:left; }
+
 </style>
 </head>
 <body>
@@ -1045,7 +1059,88 @@ ${type === 'full-report' ? `
 }
 
 /* ═══════════════ MAIN APP ═══════════════ */
-function App() {
+function AuthGate() {
+  const [authUser, setAuthUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginName, setLoginName] = useState('');
+
+  useEffect(() => {
+    fetch('/auth/me').then(r => r.json()).then(data => {
+      if (data.authenticated) setAuthUser(data.user);
+      setAuthChecked(true);
+    }).catch(() => setAuthChecked(true));
+  }, []);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const endpoint = isSignUp ? '/auth/signup' : '/auth/login';
+      const body = { email: loginEmail, password: loginPassword };
+      if (isSignUp) body.name = loginName;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setAuthUser(data.user);
+      } else {
+        setAuthError(data.error || 'Something went wrong');
+      }
+    } catch (err) {
+      setAuthError('Connection error: ' + err.message);
+    }
+    setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    setAuthUser(null);
+    setLoginEmail('');
+    setLoginPassword('');
+    setLoginName('');
+  };
+
+  if (!authChecked) return (
+    <div className="login-overlay">
+      <div className="login-card">
+        <p style={{color:'var(--text-muted)'}}>Loading...</p>
+      </div>
+    </div>
+  );
+
+  if (!authUser) return (
+    <div className="login-overlay">
+      <div className="login-card">
+        <img src="https://app.usewheelhouse.com/api/logo.png" alt="Wheelhouse" style={{height:28,marginBottom:16}} onError={e=>{e.target.style.display='none'}} />
+        <h1>{isSignUp ? 'Create Account' : 'Sign In'}</h1>
+        <p className="subtitle">{isSignUp ? 'Sign up to access the Underwriting Tool' : 'Sign in to the Underwriting Tool'}</p>
+        <form onSubmit={handleAuth}>
+          {isSignUp && <input type="text" placeholder="Full name" value={loginName} onChange={e=>setLoginName(e.target.value)} />}
+          <input type="email" placeholder="Email address" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} required />
+          <input type="password" placeholder="Password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} required minLength={6} />
+          <button type="submit" className="btn-primary" disabled={authLoading}>{authLoading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}</button>
+        </form>
+        {authError && <div className="login-error">{authError}</div>}
+        <div className="toggle" onClick={() => { setIsSignUp(!isSignUp); setAuthError(''); }}>
+          {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+        </div>
+      </div>
+    </div>
+  );
+
+  return <App authUser={authUser} onLogout={handleLogout} />;
+}
+
+function App({ authUser, onLogout }) {
   const [integrationKey, setIntegrationKey] = useState('BKXc_wza6e5A3iAcyJF1MNLk2BVrVw');
   const [userKey, setUserKey] = useState('zgo_cxsKPvbXWwxqxcijPqesySzsNw');
   const [showKeys, setShowKeys] = useState(false);
@@ -1322,6 +1417,10 @@ function App() {
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
           <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:12,color:'var(--text-muted)'}}>{authUser?.email}</span>
+          <button onClick={onLogout} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:12,cursor:'pointer',color:'var(--text-sec)',fontWeight:500}}>Sign Out</button>
         </div>
       </div>
 
@@ -1866,7 +1965,7 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<AuthGate />);
 </script>
 </body>
 </html>

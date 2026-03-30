@@ -13,11 +13,14 @@ import os
 import io
 import json
 import sqlite3
-from datetime import datetime
-from flask import Flask, request, jsonify, send_file, g
+from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, request, jsonify, send_file, g, make_response
 import re
 import requests as req
 from collections import Counter
+import jwt
+import bcrypt
 
 # ── Load .env if present ──
 env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -33,6 +36,30 @@ app = Flask(__name__)
 BASE = "https://api.usewheelhouse.com/ss_api/v1/comp_set"
 MR_BASE = "https://api.usewheelhouse.com/ss_api/v1/market_report"
 DB_PATH = os.path.join("/tmp", "wh_underwriting.db")
+JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
+ALLOWED_EMAILS = set(
+    e.strip().lower()
+    for e in os.environ.get("ALLOWED_EMAILS", "").split(",")
+    if e.strip()
+)
+
+
+# ── Auth helpers ──
+def create_session_token(email, name):
+    payload = {
+        "email": email,
+        "name": name,
+        "exp": datetime.utcnow() + timedelta(days=7),
+        "iat": datetime.utcnow(),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+
+def verify_session_token(token):
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None
 
 
 # ── SQLite helpers ──
@@ -66,6 +93,15 @@ def init_db():
             notes       TEXT
         )
     """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            email         TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            name          TEXT NOT NULL DEFAULT '',
+            created_at    TEXT NOT NULL
+        )
+    """)
     db.commit()
     db.close()
 
@@ -82,6 +118,103 @@ def get_headers():
             os.environ.get("WHEELHOUSE_USER_KEY", ""),
         ),
     }
+
+
+# ── Auth middleware ──
+@app.before_request
+def check_auth():
+    # Allow auth routes and the main page without auth
+    if request.path in ("/", "/auth/signup", "/auth/login", "/auth/me", "/auth/logout"):
+        return None
+    # Protect all /api/* routes
+    if request.path.startswith("/api/"):
+        token = request.cookies.get("session_token")
+        if not token:
+            return jsonify({"error": "Not authenticated"}), 401
+        user = verify_session_token(token)
+        if not user:
+            return jsonify({"error": "Invalid or expired session"}), 401
+        g.user = user
+    return None
+
+
+# ── Auth routes ──
+@app.route("/auth/signup", methods=["POST"])
+def auth_signup():
+    data = request.get_json()
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+    name = (data.get("name") or "").strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
+    if ALLOWED_EMAILS and email not in ALLOWED_EMAILS:
+        return jsonify({"error": "This email is not authorized to access this tool"}), 403
+
+    db = get_db()
+    existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    if existing:
+        return jsonify({"error": "An account with this email already exists"}), 409
+
+    pw_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    db.execute(
+        "INSERT INTO users (email, password_hash, name, created_at) VALUES (?, ?, ?, ?)",
+        (email, pw_hash, name, datetime.utcnow().isoformat()),
+    )
+    db.commit()
+
+    token = create_session_token(email, name)
+    resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name}}))
+    is_secure = request.url.startswith("https")
+    resp.set_cookie("session_token", token, httponly=True, secure=is_secure,
+                     samesite="Lax", max_age=7 * 86400)
+    return resp
+
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json()
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if not user:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    name = user["name"]
+    token = create_session_token(email, name)
+    resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name}}))
+    is_secure = request.url.startswith("https")
+    resp.set_cookie("session_token", token, httponly=True, secure=is_secure,
+                     samesite="Lax", max_age=7 * 86400)
+    return resp
+
+
+@app.route("/auth/me")
+def auth_me():
+    token = request.cookies.get("session_token")
+    if not token:
+        return jsonify({"authenticated": False})
+    user = verify_session_token(token)
+    if not user:
+        return jsonify({"authenticated": False})
+    return jsonify({"authenticated": True, "user": {"email": user["email"], "name": user["name"]}})
+
+
+@app.route("/auth/logout", methods=["POST"])
+def auth_logout():
+    resp = make_response(jsonify({"ok": True}))
+    resp.delete_cookie("session_token")
+    return resp
 
 
 # ── Page routes ──
