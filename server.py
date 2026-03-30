@@ -699,8 +699,10 @@ def update_notes(search_id):
     return jsonify({"ok": True})
 
 
+# Always init DB (needed for Vercel where __main__ doesn't run)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     print()
     print("  🏠 Wheelhouse Underwriting Tool")
     print("  ─────────────────────────────────")
