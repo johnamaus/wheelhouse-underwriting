@@ -20,7 +20,7 @@ import re
 import requests as req
 from collections import Counter
 import jwt
-import bcrypt
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ── Load .env if present ──
 env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -37,7 +37,13 @@ BASE = "https://api.usewheelhouse.com/ss_api/v1/comp_set"
 MR_BASE = "https://api.usewheelhouse.com/ss_api/v1/market_report"
 DB_PATH = os.path.join("/tmp", "wh_underwriting.db")
 JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
-ALLOWED_EMAILS = set(
+ADMIN_EMAILS = set(
+    e.strip().lower()
+    for e in os.environ.get("ADMIN_EMAILS", "").split(",")
+    if e.strip()
+)
+# Seed emails — imported into DB on first init, then DB is source of truth
+_SEED_EMAILS = set(
     e.strip().lower()
     for e in os.environ.get("ALLOWED_EMAILS", "").split(",")
     if e.strip()
@@ -99,9 +105,23 @@ def init_db():
             email         TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             name          TEXT NOT NULL DEFAULT '',
+            is_admin      INTEGER NOT NULL DEFAULT 0,
             created_at    TEXT NOT NULL
         )
     """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS allowed_emails (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            email      TEXT UNIQUE NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    # Seed allowed emails from env var (only inserts new ones)
+    for email in _SEED_EMAILS | ADMIN_EMAILS:
+        db.execute(
+            "INSERT OR IGNORE INTO allowed_emails (email, created_at) VALUES (?, ?)",
+            (email, datetime.utcnow().isoformat()),
+        )
     db.commit()
     db.close()
 
@@ -150,23 +170,26 @@ def auth_signup():
         return jsonify({"error": "Email and password are required"}), 400
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 400
-    if ALLOWED_EMAILS and email not in ALLOWED_EMAILS:
-        return jsonify({"error": "This email is not authorized to access this tool"}), 403
 
     db = get_db()
+    allowed = db.execute("SELECT id FROM allowed_emails WHERE email = ?", (email,)).fetchone()
+    if not allowed:
+        return jsonify({"error": "This email is not authorized to access this tool"}), 403
+
     existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
     if existing:
         return jsonify({"error": "An account with this email already exists"}), 409
 
-    pw_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    pw_hash = generate_password_hash(password)
+    is_admin = 1 if email in ADMIN_EMAILS else 0
     db.execute(
-        "INSERT INTO users (email, password_hash, name, created_at) VALUES (?, ?, ?, ?)",
-        (email, pw_hash, name, datetime.utcnow().isoformat()),
+        "INSERT INTO users (email, password_hash, name, is_admin, created_at) VALUES (?, ?, ?, ?, ?)",
+        (email, pw_hash, name, is_admin, datetime.utcnow().isoformat()),
     )
     db.commit()
 
     token = create_session_token(email, name)
-    resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name}}))
+    resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name, "is_admin": bool(is_admin)}}))
     is_secure = request.url.startswith("https")
     resp.set_cookie("session_token", token, httponly=True, secure=is_secure,
                      samesite="Lax", max_age=7 * 86400)
@@ -187,12 +210,13 @@ def auth_login():
     if not user:
         return jsonify({"error": "Invalid email or password"}), 401
 
-    if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"].encode("utf-8")):
+    if not check_password_hash(user["password_hash"], password):
         return jsonify({"error": "Invalid email or password"}), 401
 
     name = user["name"]
+    is_admin = bool(user["is_admin"])
     token = create_session_token(email, name)
-    resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name}}))
+    resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name, "is_admin": is_admin}}))
     is_secure = request.url.startswith("https")
     resp.set_cookie("session_token", token, httponly=True, secure=is_secure,
                      samesite="Lax", max_age=7 * 86400)
@@ -207,7 +231,11 @@ def auth_me():
     user = verify_session_token(token)
     if not user:
         return jsonify({"authenticated": False})
-    return jsonify({"authenticated": True, "user": {"email": user["email"], "name": user["name"]}})
+    # Look up is_admin from DB
+    db = get_db()
+    db_user = db.execute("SELECT is_admin FROM users WHERE email = ?", (user["email"],)).fetchone()
+    is_admin = bool(db_user and db_user["is_admin"])
+    return jsonify({"authenticated": True, "user": {"email": user["email"], "name": user["name"], "is_admin": is_admin}})
 
 
 @app.route("/auth/logout", methods=["POST"])
@@ -215,6 +243,63 @@ def auth_logout():
     resp = make_response(jsonify({"ok": True}))
     resp.delete_cookie("session_token")
     return resp
+
+
+# ── Admin routes ──
+def require_admin():
+    """Check that the current user is an admin. Returns error response or None."""
+    token = request.cookies.get("session_token")
+    if not token:
+        return jsonify({"error": "Not authenticated"}), 401
+    user = verify_session_token(token)
+    if not user:
+        return jsonify({"error": "Invalid session"}), 401
+    db = get_db()
+    db_user = db.execute("SELECT is_admin FROM users WHERE email = ?", (user["email"],)).fetchone()
+    if not db_user or not db_user["is_admin"]:
+        return jsonify({"error": "Admin access required"}), 403
+    return None
+
+
+@app.route("/api/admin/allowed-emails")
+def admin_list_emails():
+    err = require_admin()
+    if err:
+        return err
+    db = get_db()
+    rows = db.execute("SELECT email, created_at FROM allowed_emails ORDER BY created_at DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/admin/allowed-emails", methods=["POST"])
+def admin_add_email():
+    err = require_admin()
+    if err:
+        return err
+    data = request.get_json()
+    email = (data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email is required"}), 400
+    db = get_db()
+    existing = db.execute("SELECT id FROM allowed_emails WHERE email = ?", (email,)).fetchone()
+    if existing:
+        return jsonify({"error": "Email already in the allowed list"}), 409
+    db.execute("INSERT INTO allowed_emails (email, created_at) VALUES (?, ?)",
+               (email, datetime.utcnow().isoformat()))
+    db.commit()
+    return jsonify({"ok": True, "email": email})
+
+
+@app.route("/api/admin/allowed-emails/<path:email>", methods=["DELETE"])
+def admin_remove_email(email):
+    err = require_admin()
+    if err:
+        return err
+    email = email.strip().lower()
+    db = get_db()
+    db.execute("DELETE FROM allowed_emails WHERE email = ?", (email,))
+    db.commit()
+    return jsonify({"ok": True})
 
 
 # ── Page routes ──

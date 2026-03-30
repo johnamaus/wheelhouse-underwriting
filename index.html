@@ -1140,6 +1140,100 @@ function AuthGate() {
   return <App authUser={authUser} onLogout={handleLogout} />;
 }
 
+/* ═══════════════ ADMIN PANEL ═══════════════ */
+function AdminPanel() {
+  const [emails, setEmails] = useState([]);
+  const [newEmail, setNewEmail] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const loadEmails = async () => {
+    try {
+      const r = await fetch('/api/admin/allowed-emails');
+      if (r.ok) setEmails(await r.json());
+    } catch(e) { setError('Failed to load emails'); }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadEmails(); }, []);
+
+  const addEmail = async (e) => {
+    e.preventDefault();
+    setError(''); setSuccess('');
+    if (!newEmail.trim()) return;
+    try {
+      const r = await fetch('/api/admin/allowed-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail.trim() }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        setSuccess(`Added ${newEmail.trim()}`);
+        setNewEmail('');
+        loadEmails();
+      } else {
+        setError(data.error || 'Failed to add email');
+      }
+    } catch(e) { setError('Connection error'); }
+  };
+
+  const removeEmail = async (email) => {
+    setError(''); setSuccess('');
+    try {
+      const r = await fetch(`/api/admin/allowed-emails/${encodeURIComponent(email)}`, { method: 'DELETE' });
+      if (r.ok) {
+        setSuccess(`Removed ${email}`);
+        loadEmails();
+      }
+    } catch(e) { setError('Failed to remove email'); }
+  };
+
+  const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', flex:1 };
+
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24 }}>
+      <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Manage Allowed Emails</h2>
+      <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:20 }}>Only these email addresses can sign up for an account.</p>
+
+      <form onSubmit={addEmail} style={{ display:'flex', gap:8, marginBottom:20 }}>
+        <input type="email" placeholder="Enter email address" value={newEmail} onChange={e=>setNewEmail(e.target.value)} style={inputStyle} required />
+        <button type="submit" style={{ background:'var(--accent)', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>Add Email</button>
+      </form>
+
+      {error && <div style={{ background:'var(--red-bg)', color:'var(--red)', padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13 }}>{error}</div>}
+      {success && <div style={{ background:'var(--green-bg)', color:'var(--green)', padding:'10px 14px', borderRadius:8, marginBottom:12, fontSize:13 }}>{success}</div>}
+
+      {loading ? <p style={{color:'var(--text-muted)',fontSize:13}}>Loading...</p> : (
+        <div style={{ border:'1px solid var(--border)', borderRadius:8, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead>
+              <tr style={{ background:'var(--surface2)' }}>
+                <th style={{ textAlign:'left', padding:'10px 14px', fontWeight:600, color:'var(--text-sec)' }}>Email</th>
+                <th style={{ textAlign:'left', padding:'10px 14px', fontWeight:600, color:'var(--text-sec)' }}>Added</th>
+                <th style={{ width:80, padding:'10px 14px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {emails.map((item, i) => (
+                <tr key={item.email} style={{ borderTop:'1px solid var(--border-light)', background: i%2===0 ? 'var(--surface)' : 'var(--surface2)' }}>
+                  <td style={{ padding:'10px 14px', fontWeight:500 }}>{item.email}</td>
+                  <td style={{ padding:'10px 14px', color:'var(--text-muted)' }}>{new Date(item.created_at).toLocaleDateString()}</td>
+                  <td style={{ padding:'10px 14px', textAlign:'center' }}>
+                    <button onClick={()=>removeEmail(item.email)} style={{ background:'none', border:'none', color:'var(--red)', cursor:'pointer', fontSize:12, fontWeight:600 }}>Remove</button>
+                  </td>
+                </tr>
+              ))}
+              {emails.length === 0 && <tr><td colSpan={3} style={{ padding:'20px 14px', textAlign:'center', color:'var(--text-muted)' }}>No allowed emails yet</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App({ authUser, onLogout }) {
   const [integrationKey, setIntegrationKey] = useState('BKXc_wza6e5A3iAcyJF1MNLk2BVrVw');
   const [userKey, setUserKey] = useState('zgo_cxsKPvbXWwxqxcijPqesySzsNw');
@@ -1416,6 +1510,7 @@ function App({ authUser, onLogout }) {
           <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
+          {authUser?.is_admin && <TabBtn label="Admin" active={view==='admin'} onClick={()=>setView('admin')} />}
           <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -1961,6 +2056,9 @@ function App({ authUser, onLogout }) {
           )}
         </div>
       )}
+
+      {/* ─── Admin ─── */}
+      {view==='admin' && authUser?.is_admin && <AdminPanel />}
     </div>
   );
 }
