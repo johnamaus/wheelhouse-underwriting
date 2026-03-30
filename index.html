@@ -819,8 +819,8 @@ async function generatePDF(type, projection, assumptions, comps, ownerInfo, pmCo
     .revenue-box-label { font-size: 9px; color: #6e6e73; font-weight: 600; margin-bottom: 8px; }
     .revenue-box-value { font-size: 18px; font-weight: 700; }
     .revenue-box.conservative .revenue-box-value { color: #d97706; }
-    .revenue-box.base .revenue-box-value { color: #16a34a; }
-    .revenue-box.aggressive .revenue-box-value { color: ${accentHex}; }
+    .revenue-box.base .revenue-box-value { color: ${accentHex}; }
+    .revenue-box.aggressive .revenue-box-value { color: #22C55E; }
     .blurb-text { font-size: 9px; color: #6e6e73; line-height: 1.5; margin-bottom: 12px; }
     .disclaimer { font-size: 7px; color: #999; line-height: 1.4; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e5ea; }
 
@@ -835,8 +835,8 @@ async function generatePDF(type, projection, assumptions, comps, ownerInfo, pmCo
     .data-table tr:nth-child(even) { background: #f8f8fa; }
     .data-table .scenario-label { text-align: left; font-weight: 600; color: #1d1d1f; }
     .data-table .conservative { color: #d97706; font-weight: 600; }
-    .data-table .base { color: #16a34a; font-weight: 600; }
-    .data-table .aggressive { color: ${accentHex}; font-weight: 600; }
+    .data-table .base { color: ${accentHex}; font-weight: 600; }
+    .data-table .aggressive { color: #22C55E; font-weight: 600; }
 
     /* PAGE 4: COMPS */
     .comps-body { padding: 0 18mm 18mm; }
@@ -1658,8 +1658,8 @@ function App() {
               <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
                 {[
                   {key:'conservative', label:'Conservative', color:'var(--yellow)', icon:'🛡️', desc:'85% of median'},
-                  {key:'base', label:'Base Case', color:'var(--green)', icon:'📊', desc:'Median comp data'},
-                  {key:'aggressive', label:'Aggressive', color:'var(--accent)', icon:'🚀', desc:'115% of median'},
+                  {key:'base', label:'Base Case', color:'var(--accent)', icon:'📊', desc:'Median comp data'},
+                  {key:'aggressive', label:'Aggressive', color:'var(--green)', icon:'🚀', desc:'115% of median'},
                 ].map(s=>(
                   <div key={s.key} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:20,textAlign:'center'}}>
                     <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
@@ -1678,7 +1678,7 @@ function App() {
 
               {/* ── Full Monthly Metrics Tables (transposed: months as columns, KPIs as rows) ── */}
               {['conservative','base','aggressive'].map((scenario) => {
-                const colors = {conservative:'var(--yellow)',base:'var(--green)',aggressive:'var(--accent)'};
+                const colors = {conservative:'var(--yellow)',base:'var(--accent)',aggressive:'var(--green)'};
                 const labels = {conservative:'Conservative',base:'Base Case',aggressive:'Aggressive'};
                 const icons = {conservative:'🛡️',base:'📊',aggressive:'🚀'};
                 const sc = projection.monthly[scenario];
