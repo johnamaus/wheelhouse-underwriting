@@ -1137,7 +1137,106 @@ function AuthGate() {
     </div>
   );
 
-  return <App authUser={authUser} onLogout={handleLogout} />;
+  return <App authUser={authUser} onLogout={handleLogout} setAuthUser={setAuthUser} />;
+}
+
+/* ═══════════════ PROFILE PANEL ═══════════════ */
+function ProfilePanel({ authUser, onLogout, setAuthUser }) {
+  const [name, setName] = useState(authUser?.name || '');
+  const [email, setEmail] = useState(authUser?.email || '');
+  const [saving, setSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState('');
+  const [profileErr, setProfileErr] = useState('');
+
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwErr, setPwErr] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const saveProfile = async (e) => {
+    e.preventDefault();
+    setSaving(true); setProfileMsg(''); setProfileErr('');
+    try {
+      const r = await fetch('/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        setProfileMsg('Profile updated');
+        if (data.user) setAuthUser(data.user);
+      } else {
+        setProfileErr(data.error || 'Failed to update');
+      }
+    } catch(e) { setProfileErr('Connection error'); }
+    setSaving(false);
+  };
+
+  const changePassword = async (e) => {
+    e.preventDefault();
+    setPwSaving(true); setPwMsg(''); setPwErr('');
+    try {
+      const r = await fetch('/auth/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        setPwMsg('Password changed');
+        setCurrentPw(''); setNewPw('');
+      } else {
+        setPwErr(data.error || 'Failed to change password');
+      }
+    } catch(e) { setPwErr('Connection error'); }
+    setPwSaving(false);
+  };
+
+  const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%' };
+
+  return (
+    <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+      {/* Profile info */}
+      <div style={{ flex:'1 1 400px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24 }}>
+        <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Profile</h2>
+        <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:20 }}>Update your account information.</p>
+        <form onSubmit={saveProfile}>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Full Name</label>
+            <input value={name} onChange={e=>setName(e.target.value)} style={inputStyle} />
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} style={inputStyle} />
+          </div>
+          <button type="submit" disabled={saving} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'9px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>{saving ? 'Saving...' : 'Save Changes'}</button>
+          {profileMsg && <div style={{color:'var(--green)',fontSize:13,marginTop:8}}>{profileMsg}</div>}
+          {profileErr && <div style={{color:'var(--red)',fontSize:13,marginTop:8}}>{profileErr}</div>}
+        </form>
+      </div>
+
+      {/* Change password */}
+      <div style={{ flex:'1 1 400px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24 }}>
+        <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Change Password</h2>
+        <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:20 }}>Enter your current password and a new one.</p>
+        <form onSubmit={changePassword}>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Current Password</label>
+            <input type="password" value={currentPw} onChange={e=>setCurrentPw(e.target.value)} style={inputStyle} required />
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>New Password</label>
+            <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} style={inputStyle} required minLength={6} />
+          </div>
+          <button type="submit" disabled={pwSaving} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'9px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>{pwSaving ? 'Saving...' : 'Update Password'}</button>
+          {pwMsg && <div style={{color:'var(--green)',fontSize:13,marginTop:8}}>{pwMsg}</div>}
+          {pwErr && <div style={{color:'var(--red)',fontSize:13,marginTop:8}}>{pwErr}</div>}
+        </form>
+      </div>
+    </div>
+  );
 }
 
 /* ═══════════════ ADMIN PANEL ═══════════════ */
@@ -1190,6 +1289,20 @@ function AdminPanel() {
     } catch(e) { setError('Failed to remove email'); }
   };
 
+  const toggleAdmin = async (email) => {
+    setError(''); setSuccess('');
+    try {
+      const r = await fetch(`/api/admin/toggle-admin/${encodeURIComponent(email)}`, { method: 'POST' });
+      const data = await r.json();
+      if (r.ok) {
+        setSuccess(`${email} is now ${data.is_admin ? 'an admin' : 'a regular user'}`);
+        loadEmails();
+      } else {
+        setError(data.error || 'Failed to toggle admin');
+      }
+    } catch(e) { setError('Failed to toggle admin'); }
+  };
+
   const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', flex:1 };
 
   return (
@@ -1211,6 +1324,8 @@ function AdminPanel() {
             <thead>
               <tr style={{ background:'var(--surface2)' }}>
                 <th style={{ textAlign:'left', padding:'10px 14px', fontWeight:600, color:'var(--text-sec)' }}>Email</th>
+                <th style={{ textAlign:'left', padding:'10px 14px', fontWeight:600, color:'var(--text-sec)' }}>Status</th>
+                <th style={{ textAlign:'center', padding:'10px 14px', fontWeight:600, color:'var(--text-sec)' }}>Admin</th>
                 <th style={{ textAlign:'left', padding:'10px 14px', fontWeight:600, color:'var(--text-sec)' }}>Added</th>
                 <th style={{ width:80, padding:'10px 14px' }}></th>
               </tr>
@@ -1219,13 +1334,28 @@ function AdminPanel() {
               {emails.map((item, i) => (
                 <tr key={item.email} style={{ borderTop:'1px solid var(--border-light)', background: i%2===0 ? 'var(--surface)' : 'var(--surface2)' }}>
                   <td style={{ padding:'10px 14px', fontWeight:500 }}>{item.email}</td>
+                  <td style={{ padding:'10px 14px' }}>
+                    {item.has_account
+                      ? <span style={{fontSize:11,background:'var(--green-bg)',color:'var(--green)',padding:'2px 8px',borderRadius:4,fontWeight:600}}>Signed Up</span>
+                      : <span style={{fontSize:11,background:'var(--surface2)',color:'var(--text-muted)',padding:'2px 8px',borderRadius:4,fontWeight:600}}>Pending</span>}
+                  </td>
+                  <td style={{ padding:'10px 14px', textAlign:'center' }}>
+                    {item.has_account ? (
+                      <button onClick={()=>toggleAdmin(item.email)} style={{
+                        background: item.is_admin ? 'var(--accent)' : 'var(--surface)',
+                        color: item.is_admin ? '#fff' : 'var(--text-muted)',
+                        border: item.is_admin ? 'none' : '1px solid var(--border)',
+                        borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer'
+                      }}>{item.is_admin ? 'Admin' : 'User'}</button>
+                    ) : <span style={{fontSize:11,color:'var(--text-muted)'}}>—</span>}
+                  </td>
                   <td style={{ padding:'10px 14px', color:'var(--text-muted)' }}>{new Date(item.created_at).toLocaleDateString()}</td>
                   <td style={{ padding:'10px 14px', textAlign:'center' }}>
                     <button onClick={()=>removeEmail(item.email)} style={{ background:'none', border:'none', color:'var(--red)', cursor:'pointer', fontSize:12, fontWeight:600 }}>Remove</button>
                   </td>
                 </tr>
               ))}
-              {emails.length === 0 && <tr><td colSpan={3} style={{ padding:'20px 14px', textAlign:'center', color:'var(--text-muted)' }}>No allowed emails yet</td></tr>}
+              {emails.length === 0 && <tr><td colSpan={5} style={{ padding:'20px 14px', textAlign:'center', color:'var(--text-muted)' }}>No allowed emails yet</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1234,7 +1364,7 @@ function AdminPanel() {
   );
 }
 
-function App({ authUser, onLogout }) {
+function App({ authUser, onLogout, setAuthUser }) {
   const [integrationKey, setIntegrationKey] = useState('BKXc_wza6e5A3iAcyJF1MNLk2BVrVw');
   const [userKey, setUserKey] = useState('zgo_cxsKPvbXWwxqxcijPqesySzsNw');
   const [showKeys, setShowKeys] = useState(false);
@@ -1513,8 +1643,11 @@ function App({ authUser, onLogout }) {
           {authUser?.is_admin && <TabBtn label="Admin" active={view==='admin'} onClick={()=>setView('admin')} />}
           <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:12,color:'var(--text-muted)'}}>{authUser?.email}</span>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <button onClick={()=>setView('profile')} style={{background: view==='profile' ? 'var(--accent-bg)' : 'transparent',border:'1px solid '+(view==='profile'?'var(--accent-light)':'var(--border)'),borderRadius:8,padding:'5px 12px',fontSize:12,cursor:'pointer',color: view==='profile'?'var(--accent)':'var(--text-sec)',fontWeight:500,display:'flex',alignItems:'center',gap:6}}>
+            <span style={{width:20,height:20,borderRadius:'50%',background:'var(--accent)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700}}>{(authUser?.name||authUser?.email||'?')[0].toUpperCase()}</span>
+            {authUser?.email}
+          </button>
           <button onClick={onLogout} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:12,cursor:'pointer',color:'var(--text-sec)',fontWeight:500}}>Sign Out</button>
         </div>
       </div>
@@ -2056,6 +2189,9 @@ function App({ authUser, onLogout }) {
           )}
         </div>
       )}
+
+      {/* ─── Profile ─── */}
+      {view==='profile' && <ProfilePanel authUser={authUser} onLogout={onLogout} setAuthUser={setAuthUser} />}
 
       {/* ─── Admin ─── */}
       {view==='admin' && authUser?.is_admin && <AdminPanel />}

@@ -144,7 +144,7 @@ def get_headers():
 @app.before_request
 def check_auth():
     # Allow auth routes and the main page without auth
-    if request.path in ("/", "/auth/signup", "/auth/login", "/auth/me", "/auth/logout"):
+    if request.path in ("/", "/auth/signup", "/auth/login", "/auth/me", "/auth/logout", "/auth/profile", "/auth/password"):
         return None
     # Protect all /api/* routes
     if request.path.startswith("/api/"):
@@ -214,7 +214,12 @@ def auth_login():
         return jsonify({"error": "Invalid email or password"}), 401
 
     name = user["name"]
+    # Auto-upgrade admin status if email is in ADMIN_EMAILS
     is_admin = bool(user["is_admin"])
+    if email in ADMIN_EMAILS and not is_admin:
+        db.execute("UPDATE users SET is_admin = 1 WHERE email = ?", (email,))
+        db.commit()
+        is_admin = True
     token = create_session_token(email, name)
     resp = make_response(jsonify({"ok": True, "user": {"email": email, "name": name, "is_admin": is_admin}}))
     is_secure = request.url.startswith("https")
@@ -245,6 +250,72 @@ def auth_logout():
     return resp
 
 
+@app.route("/auth/profile", methods=["PUT"])
+def auth_update_profile():
+    token = request.cookies.get("session_token")
+    if not token:
+        return jsonify({"error": "Not authenticated"}), 401
+    user = verify_session_token(token)
+    if not user:
+        return jsonify({"error": "Invalid session"}), 401
+
+    data = request.get_json()
+    name = (data.get("name") or "").strip()
+    new_email = (data.get("email") or "").strip().lower()
+    current_email = user["email"]
+
+    db = get_db()
+    if new_email and new_email != current_email:
+        # Check if new email is already taken
+        existing = db.execute("SELECT id FROM users WHERE email = ?", (new_email,)).fetchone()
+        if existing:
+            return jsonify({"error": "Email already in use"}), 409
+        db.execute("UPDATE users SET email = ?, name = ? WHERE email = ?", (new_email, name, current_email))
+        # Also update allowed_emails table
+        db.execute("UPDATE allowed_emails SET email = ? WHERE email = ?", (new_email, current_email))
+    else:
+        new_email = current_email
+        db.execute("UPDATE users SET name = ? WHERE email = ?", (name, current_email))
+    db.commit()
+
+    # Issue new token with updated info
+    token = create_session_token(new_email, name)
+    db_user = db.execute("SELECT is_admin FROM users WHERE email = ?", (new_email,)).fetchone()
+    is_admin = bool(db_user and db_user["is_admin"])
+    resp = make_response(jsonify({"ok": True, "user": {"email": new_email, "name": name, "is_admin": is_admin}}))
+    is_secure = request.url.startswith("https")
+    resp.set_cookie("session_token", token, httponly=True, secure=is_secure,
+                     samesite="Lax", max_age=7 * 86400)
+    return resp
+
+
+@app.route("/auth/password", methods=["PUT"])
+def auth_change_password():
+    token = request.cookies.get("session_token")
+    if not token:
+        return jsonify({"error": "Not authenticated"}), 401
+    user = verify_session_token(token)
+    if not user:
+        return jsonify({"error": "Invalid session"}), 401
+
+    data = request.get_json()
+    current_pw = data.get("current_password") or ""
+    new_pw = data.get("new_password") or ""
+
+    if len(new_pw) < 6:
+        return jsonify({"error": "New password must be at least 6 characters"}), 400
+
+    db = get_db()
+    db_user = db.execute("SELECT password_hash FROM users WHERE email = ?", (user["email"],)).fetchone()
+    if not db_user or not check_password_hash(db_user["password_hash"], current_pw):
+        return jsonify({"error": "Current password is incorrect"}), 401
+
+    new_hash = generate_password_hash(new_pw)
+    db.execute("UPDATE users SET password_hash = ? WHERE email = ?", (new_hash, user["email"]))
+    db.commit()
+    return jsonify({"ok": True})
+
+
 # ── Admin routes ──
 def require_admin():
     """Check that the current user is an admin. Returns error response or None."""
@@ -267,7 +338,14 @@ def admin_list_emails():
     if err:
         return err
     db = get_db()
-    rows = db.execute("SELECT email, created_at FROM allowed_emails ORDER BY created_at DESC").fetchall()
+    rows = db.execute("""
+        SELECT a.email, a.created_at,
+               COALESCE(u.is_admin, 0) as is_admin,
+               CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END as has_account
+        FROM allowed_emails a
+        LEFT JOIN users u ON a.email = u.email
+        ORDER BY a.created_at DESC
+    """).fetchall()
     return jsonify([dict(r) for r in rows])
 
 
@@ -300,6 +378,22 @@ def admin_remove_email(email):
     db.execute("DELETE FROM allowed_emails WHERE email = ?", (email,))
     db.commit()
     return jsonify({"ok": True})
+
+
+@app.route("/api/admin/toggle-admin/<path:email>", methods=["POST"])
+def admin_toggle_admin(email):
+    err = require_admin()
+    if err:
+        return err
+    email = email.strip().lower()
+    db = get_db()
+    user = db.execute("SELECT is_admin FROM users WHERE email = ?", (email,)).fetchone()
+    if not user:
+        return jsonify({"error": "User has not signed up yet"}), 404
+    new_val = 0 if user["is_admin"] else 1
+    db.execute("UPDATE users SET is_admin = ? WHERE email = ?", (new_val, email))
+    db.commit()
+    return jsonify({"ok": True, "is_admin": bool(new_val)})
 
 
 # ── Page routes ──
