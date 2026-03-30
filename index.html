@@ -326,33 +326,34 @@ const WidgetsPanel = ({ visible, setVisible, onClose }) => (
 );
 
 /* ─ Filters Panel (expandable sections, matches WH) ─ */
+const filterInputStyle = { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 8px', fontSize:13, color:'var(--text)', width:'100%', outline:'none' };
+
+const FilterNumInput = React.memo(({ label, value, field, placeholder, setFilters }) => (
+  <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+    <label style={{ fontSize:11, color:'var(--text-muted)' }}>{label}</label>
+    <input type="text" inputMode="decimal" value={value||''} placeholder={placeholder||''} onChange={e=>{ const v=e.target.value; if(v===''||/^[0-9]*\.?[0-9]*$/.test(v)) setFilters(p=>({...p,[field]:v})); }} style={filterInputStyle} />
+  </div>
+));
+
+const FilterSection = ({ id, label, badge, expanded, toggle, children }) => (
+  <div style={{ borderBottom:'1px solid var(--border-light)' }}>
+    <div onClick={()=>toggle(id)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', cursor:'pointer' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+        <span style={{ fontSize:13, fontWeight:600 }}>{label}</span>
+        {badge && <span style={{ fontSize:10, fontWeight:700, background:'var(--accent)', color:'#fff', borderRadius:8, padding:'1px 6px' }}>{badge}</span>}
+      </div>
+      <span style={{ fontSize:12, color:'var(--text-muted)', transition:'transform .2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+    </div>
+    {expanded && <div style={{ padding:'0 16px 14px' }}>{children}</div>}
+  </div>
+);
+
 const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities, setAmenities, availableAmenities, onApply, onClear, totalCount, filteredCount }) => {
   const [expanded, setExpanded] = useState({ bedrooms: true, bathrooms: true, sleeps: false, performance: true, reputation: false, roomTypes: false, amenities: false });
-  const toggle = k => setExpanded(p=>({...p,[k]:!p[k]}));
+  const toggle = useCallback(k => setExpanded(p=>({...p,[k]:!p[k]})), []);
   const [amenitySearch, setAmenitySearch] = useState('');
 
   const activeCount = [filters.minBed, filters.maxBed, filters.minBath, filters.maxBath, filters.minSleeps, filters.maxSleeps, filters.minRevenue, filters.minOcc, filters.minRating, filters.minReviews].filter(Boolean).length + (roomTypes.length ? 1 : 0) + (amenities.length ? 1 : 0);
-
-  const Section = ({ id, label, children, badge }) => (
-    <div style={{ borderBottom:'1px solid var(--border-light)' }}>
-      <div onClick={()=>toggle(id)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px', cursor:'pointer' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <span style={{ fontSize:13, fontWeight:600 }}>{label}</span>
-          {badge && <span style={{ fontSize:10, fontWeight:700, background:'var(--accent)', color:'#fff', borderRadius:8, padding:'1px 6px' }}>{badge}</span>}
-        </div>
-        <span style={{ fontSize:12, color:'var(--text-muted)', transition:'transform .2s', transform: expanded[id] ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
-      </div>
-      {expanded[id] && <div style={{ padding:'0 16px 14px' }}>{children}</div>}
-    </div>
-  );
-
-  const fi = { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 8px', fontSize:13, color:'var(--text)', width:'100%', outline:'none' };
-  const NumInput = ({ label, value, field, step, placeholder }) => (
-    <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-      <label style={{ fontSize:11, color:'var(--text-muted)' }}>{label}</label>
-      <input type="number" step={step||1} value={value||''} placeholder={placeholder||''} onChange={e=>setFilters(p=>({...p,[field]:e.target.value}))} style={fi} />
-    </div>
-  );
 
   return (
     <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, width:250, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'calc(100vh - 120px)', flexShrink:0 }}>
@@ -369,43 +370,43 @@ const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities,
       </div>
 
       <div style={{ overflowY:'auto', flex:1 }}>
-        <Section id="bedrooms" label="Bedrooms" badge={filters.minBed||filters.maxBed ? '!' : null}>
+        <FilterSection id="bedrooms" label="Bedrooms" badge={filters.minBed||filters.maxBed ? '!' : null} expanded={expanded.bedrooms} toggle={toggle}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <NumInput label="Min" value={filters.minBed} field="minBed" placeholder="Any" />
-            <NumInput label="Max" value={filters.maxBed} field="maxBed" placeholder="Any" />
+            <FilterNumInput label="Min" value={filters.minBed} field="minBed" placeholder="Any" setFilters={setFilters} />
+            <FilterNumInput label="Max" value={filters.maxBed} field="maxBed" placeholder="Any" setFilters={setFilters} />
           </div>
-        </Section>
+        </FilterSection>
 
-        <Section id="bathrooms" label="Bathrooms" badge={filters.minBath||filters.maxBath ? '!' : null}>
+        <FilterSection id="bathrooms" label="Bathrooms" badge={filters.minBath||filters.maxBath ? '!' : null} expanded={expanded.bathrooms} toggle={toggle}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <NumInput label="Min" value={filters.minBath} field="minBath" step="0.5" placeholder="Any" />
-            <NumInput label="Max" value={filters.maxBath} field="maxBath" step="0.5" placeholder="Any" />
+            <FilterNumInput label="Min" value={filters.minBath} field="minBath" placeholder="Any" setFilters={setFilters} />
+            <FilterNumInput label="Max" value={filters.maxBath} field="maxBath" placeholder="Any" setFilters={setFilters} />
           </div>
-        </Section>
+        </FilterSection>
 
-        <Section id="sleeps" label="Sleeps" badge={filters.minSleeps||filters.maxSleeps ? '!' : null}>
+        <FilterSection id="sleeps" label="Sleeps" badge={filters.minSleeps||filters.maxSleeps ? '!' : null} expanded={expanded.sleeps} toggle={toggle}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <NumInput label="Min" value={filters.minSleeps} field="minSleeps" placeholder="Any" />
-            <NumInput label="Max" value={filters.maxSleeps} field="maxSleeps" placeholder="Any" />
+            <FilterNumInput label="Min" value={filters.minSleeps} field="minSleeps" placeholder="Any" setFilters={setFilters} />
+            <FilterNumInput label="Max" value={filters.maxSleeps} field="maxSleeps" placeholder="Any" setFilters={setFilters} />
           </div>
-        </Section>
+        </FilterSection>
 
-        <Section id="performance" label="Performance" badge={filters.minRevenue||filters.minOcc ? '!' : null}>
+        <FilterSection id="performance" label="Performance" badge={filters.minRevenue||filters.minOcc ? '!' : null} expanded={expanded.performance} toggle={toggle}>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            <NumInput label="Min Annual Revenue ($)" value={filters.minRevenue} field="minRevenue" placeholder="e.g. 30000" />
-            <NumInput label="Min Occupancy (%)" value={filters.minOcc} field="minOcc" step="0.01" placeholder="e.g. 50" />
-            <NumInput label="Min Total ADR ($)" value={filters.minADR} field="minADR" placeholder="e.g. 100" />
+            <FilterNumInput label="Min Annual Revenue ($)" value={filters.minRevenue} field="minRevenue" placeholder="e.g. 30000" setFilters={setFilters} />
+            <FilterNumInput label="Min Occupancy (%)" value={filters.minOcc} field="minOcc" placeholder="e.g. 50" setFilters={setFilters} />
+            <FilterNumInput label="Min Total ADR ($)" value={filters.minADR} field="minADR" placeholder="e.g. 100" setFilters={setFilters} />
           </div>
-        </Section>
+        </FilterSection>
 
-        <Section id="reputation" label="Reputation" badge={filters.minRating||filters.minReviews ? '!' : null}>
+        <FilterSection id="reputation" label="Reputation" badge={filters.minRating||filters.minReviews ? '!' : null} expanded={expanded.reputation} toggle={toggle}>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            <NumInput label="Min Rating" value={filters.minRating} field="minRating" step="0.1" placeholder="e.g. 4.5" />
-            <NumInput label="Min Reviews" value={filters.minReviews} field="minReviews" placeholder="e.g. 10" />
+            <FilterNumInput label="Min Rating" value={filters.minRating} field="minRating" placeholder="e.g. 4.5" setFilters={setFilters} />
+            <FilterNumInput label="Min Reviews" value={filters.minReviews} field="minReviews" placeholder="e.g. 10" setFilters={setFilters} />
           </div>
-        </Section>
+        </FilterSection>
 
-        <Section id="roomTypes" label="Room Types" badge={roomTypes.length ? roomTypes.length : null}>
+        <FilterSection id="roomTypes" label="Room Types" badge={roomTypes.length ? roomTypes.length : null} expanded={expanded.roomTypes} toggle={toggle}>
           <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
             {ROOM_TYPES.map(rt=>{
               const sel = roomTypes.includes(rt);
@@ -413,9 +414,9 @@ const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities,
                 style={{ background:sel?'var(--accent)':'var(--surface2)', border:sel?'none':'1px solid var(--border)', borderRadius:5, padding:'3px 8px', color:sel?'#fff':'var(--text)', fontSize:11, cursor:'pointer' }}>{rt}</button>;
             })}
           </div>
-        </Section>
+        </FilterSection>
 
-        <Section id="amenities" label="Amenities" badge={amenities.length ? amenities.length : null}>
+        <FilterSection id="amenities" label="Amenities" badge={amenities.length ? amenities.length : null} expanded={expanded.amenities} toggle={toggle}>
           {(() => {
             const fmt = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             return (
@@ -445,7 +446,7 @@ const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities,
               </div>
             );
           })()}
-        </Section>
+        </FilterSection>
       </div>
 
       <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', gap:8 }}>
