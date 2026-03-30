@@ -348,12 +348,27 @@ const FilterSection = ({ id, label, badge, expanded, toggle, children }) => (
   </div>
 );
 
-const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities, setAmenities, availableAmenities, onApply, onClear, totalCount, filteredCount }) => {
+const emptyFilters = { minBed:'', maxBed:'', minBath:'', maxBath:'', minSleeps:'', maxSleeps:'', minRevenue:'', minOcc:'', minADR:'', minRating:'', minReviews:'' };
+
+const FiltersPanel = ({ filters, applyFilters, roomTypes, setRoomTypes, amenities, setAmenities, availableAmenities, onClear, totalCount, filteredCount }) => {
   const [expanded, setExpanded] = useState({ bedrooms: true, bathrooms: true, sleeps: false, performance: true, reputation: false, roomTypes: false, amenities: false });
   const toggle = useCallback(k => setExpanded(p=>({...p,[k]:!p[k]})), []);
   const [amenitySearch, setAmenitySearch] = useState('');
+  const [draft, setDraft] = useState(filters);
+  const [draftRoomTypes, setDraftRoomTypes] = useState(roomTypes);
+  const [draftAmenities, setDraftAmenities] = useState(amenities);
 
-  const activeCount = [filters.minBed, filters.maxBed, filters.minBath, filters.maxBath, filters.minSleeps, filters.maxSleeps, filters.minRevenue, filters.minOcc, filters.minRating, filters.minReviews].filter(Boolean).length + (roomTypes.length ? 1 : 0) + (amenities.length ? 1 : 0);
+  // Sync draft when applied filters change externally (e.g. clear)
+  useEffect(() => { setDraft(filters); }, [JSON.stringify(filters)]);
+  useEffect(() => { setDraftRoomTypes(roomTypes); }, [JSON.stringify(roomTypes)]);
+  useEffect(() => { setDraftAmenities(amenities); }, [JSON.stringify(amenities)]);
+
+  const hasPendingChanges = JSON.stringify(draft) !== JSON.stringify(filters) || JSON.stringify(draftRoomTypes) !== JSON.stringify(roomTypes) || JSON.stringify(draftAmenities) !== JSON.stringify(amenities);
+  const hasAnyFilters = Object.values(draft).some(Boolean) || draftRoomTypes.length > 0 || draftAmenities.length > 0;
+
+  const handleApply = () => { applyFilters(draft, draftRoomTypes, draftAmenities); };
+
+  const activeCount = [draft.minBed, draft.maxBed, draft.minBath, draft.maxBath, draft.minSleeps, draft.maxSleeps, draft.minRevenue, draft.minOcc, draft.minRating, draft.minReviews].filter(Boolean).length + (draftRoomTypes.length ? 1 : 0) + (draftAmenities.length ? 1 : 0);
 
   return (
     <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, width:250, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'calc(100vh - 120px)', flexShrink:0 }}>
@@ -370,73 +385,73 @@ const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities,
       </div>
 
       <div style={{ overflowY:'auto', flex:1 }}>
-        <FilterSection id="bedrooms" label="Bedrooms" badge={filters.minBed||filters.maxBed ? '!' : null} expanded={expanded.bedrooms} toggle={toggle}>
+        <FilterSection id="bedrooms" label="Bedrooms" badge={draft.minBed||draft.maxBed ? '!' : null} expanded={expanded.bedrooms} toggle={toggle}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <FilterNumInput label="Min" value={filters.minBed} field="minBed" placeholder="Any" setFilters={setFilters} />
-            <FilterNumInput label="Max" value={filters.maxBed} field="maxBed" placeholder="Any" setFilters={setFilters} />
+            <FilterNumInput label="Min" value={draft.minBed} field="minBed" placeholder="Any" setFilters={setDraft} />
+            <FilterNumInput label="Max" value={draft.maxBed} field="maxBed" placeholder="Any" setFilters={setDraft} />
           </div>
         </FilterSection>
 
-        <FilterSection id="bathrooms" label="Bathrooms" badge={filters.minBath||filters.maxBath ? '!' : null} expanded={expanded.bathrooms} toggle={toggle}>
+        <FilterSection id="bathrooms" label="Bathrooms" badge={draft.minBath||draft.maxBath ? '!' : null} expanded={expanded.bathrooms} toggle={toggle}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <FilterNumInput label="Min" value={filters.minBath} field="minBath" placeholder="Any" setFilters={setFilters} />
-            <FilterNumInput label="Max" value={filters.maxBath} field="maxBath" placeholder="Any" setFilters={setFilters} />
+            <FilterNumInput label="Min" value={draft.minBath} field="minBath" placeholder="Any" setFilters={setDraft} />
+            <FilterNumInput label="Max" value={draft.maxBath} field="maxBath" placeholder="Any" setFilters={setDraft} />
           </div>
         </FilterSection>
 
-        <FilterSection id="sleeps" label="Sleeps" badge={filters.minSleeps||filters.maxSleeps ? '!' : null} expanded={expanded.sleeps} toggle={toggle}>
+        <FilterSection id="sleeps" label="Sleeps" badge={draft.minSleeps||draft.maxSleeps ? '!' : null} expanded={expanded.sleeps} toggle={toggle}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <FilterNumInput label="Min" value={filters.minSleeps} field="minSleeps" placeholder="Any" setFilters={setFilters} />
-            <FilterNumInput label="Max" value={filters.maxSleeps} field="maxSleeps" placeholder="Any" setFilters={setFilters} />
+            <FilterNumInput label="Min" value={draft.minSleeps} field="minSleeps" placeholder="Any" setFilters={setDraft} />
+            <FilterNumInput label="Max" value={draft.maxSleeps} field="maxSleeps" placeholder="Any" setFilters={setDraft} />
           </div>
         </FilterSection>
 
-        <FilterSection id="performance" label="Performance" badge={filters.minRevenue||filters.minOcc ? '!' : null} expanded={expanded.performance} toggle={toggle}>
+        <FilterSection id="performance" label="Performance" badge={draft.minRevenue||draft.minOcc ? '!' : null} expanded={expanded.performance} toggle={toggle}>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            <FilterNumInput label="Min Annual Revenue ($)" value={filters.minRevenue} field="minRevenue" placeholder="e.g. 30000" setFilters={setFilters} />
-            <FilterNumInput label="Min Occupancy (%)" value={filters.minOcc} field="minOcc" placeholder="e.g. 50" setFilters={setFilters} />
-            <FilterNumInput label="Min Total ADR ($)" value={filters.minADR} field="minADR" placeholder="e.g. 100" setFilters={setFilters} />
+            <FilterNumInput label="Min Annual Revenue ($)" value={draft.minRevenue} field="minRevenue" placeholder="e.g. 30000" setFilters={setDraft} />
+            <FilterNumInput label="Min Occupancy (%)" value={draft.minOcc} field="minOcc" placeholder="e.g. 50" setFilters={setDraft} />
+            <FilterNumInput label="Min Total ADR ($)" value={draft.minADR} field="minADR" placeholder="e.g. 100" setFilters={setDraft} />
           </div>
         </FilterSection>
 
-        <FilterSection id="reputation" label="Reputation" badge={filters.minRating||filters.minReviews ? '!' : null} expanded={expanded.reputation} toggle={toggle}>
+        <FilterSection id="reputation" label="Reputation" badge={draft.minRating||draft.minReviews ? '!' : null} expanded={expanded.reputation} toggle={toggle}>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            <FilterNumInput label="Min Rating" value={filters.minRating} field="minRating" placeholder="e.g. 4.5" setFilters={setFilters} />
-            <FilterNumInput label="Min Reviews" value={filters.minReviews} field="minReviews" placeholder="e.g. 10" setFilters={setFilters} />
+            <FilterNumInput label="Min Rating" value={draft.minRating} field="minRating" placeholder="e.g. 4.5" setFilters={setDraft} />
+            <FilterNumInput label="Min Reviews" value={draft.minReviews} field="minReviews" placeholder="e.g. 10" setFilters={setDraft} />
           </div>
         </FilterSection>
 
-        <FilterSection id="roomTypes" label="Room Types" badge={roomTypes.length ? roomTypes.length : null} expanded={expanded.roomTypes} toggle={toggle}>
+        <FilterSection id="roomTypes" label="Room Types" badge={draftRoomTypes.length ? draftRoomTypes.length : null} expanded={expanded.roomTypes} toggle={toggle}>
           <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
             {ROOM_TYPES.map(rt=>{
-              const sel = roomTypes.includes(rt);
-              return <button key={rt} onClick={()=>setRoomTypes(p=>sel?p.filter(x=>x!==rt):[...p,rt])}
+              const sel = draftRoomTypes.includes(rt);
+              return <button key={rt} onClick={()=>setDraftRoomTypes(p=>sel?p.filter(x=>x!==rt):[...p,rt])}
                 style={{ background:sel?'var(--accent)':'var(--surface2)', border:sel?'none':'1px solid var(--border)', borderRadius:5, padding:'3px 8px', color:sel?'#fff':'var(--text)', fontSize:11, cursor:'pointer' }}>{rt}</button>;
             })}
           </div>
         </FilterSection>
 
-        <FilterSection id="amenities" label="Amenities" badge={amenities.length ? amenities.length : null} expanded={expanded.amenities} toggle={toggle}>
+        <FilterSection id="amenities" label="Amenities" badge={draftAmenities.length ? draftAmenities.length : null} expanded={expanded.amenities} toggle={toggle}>
           {(() => {
             const fmt = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             return (
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 <input type="text" placeholder="Search amenities..." value={amenitySearch} onChange={e=>setAmenitySearch(e.target.value)}
                   style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 8px', fontSize:12, color:'var(--text)', outline:'none', marginBottom:2 }} />
-                {amenities.length > 0 && (
+                {draftAmenities.length > 0 && (
                   <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:4, paddingBottom:6, borderBottom:'1px solid var(--border-light)' }}>
-                    {amenities.map(a=>(
-                      <button key={a} onClick={()=>setAmenities(p=>p.filter(x=>x!==a))}
+                    {draftAmenities.map(a=>(
+                      <button key={a} onClick={()=>setDraftAmenities(p=>p.filter(x=>x!==a))}
                         style={{ background:'var(--accent)', border:'none', borderRadius:5, padding:'3px 8px', color:'#fff', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', gap:3 }}>{fmt(a)} ×</button>
                     ))}
                   </div>
                 )}
                 <div style={{ display:'flex', flexWrap:'wrap', gap:4, maxHeight:200, overflowY:'auto' }}>
                   {(availableAmenities || [])
-                    .filter(a => !amenities.includes(a))
+                    .filter(a => !draftAmenities.includes(a))
                     .filter(a => !amenitySearch || fmt(a).toLowerCase().includes(amenitySearch.toLowerCase()))
                     .map(a=>(
-                      <button key={a} onClick={()=>setAmenities(p=>[...p,a])}
+                      <button key={a} onClick={()=>setDraftAmenities(p=>[...p,a])}
                         style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:5, padding:'3px 8px', color:'var(--text)', fontSize:11, cursor:'pointer' }}>{fmt(a)}</button>
                     ))}
                   {availableAmenities && availableAmenities.length === 0 && (
@@ -450,8 +465,8 @@ const FiltersPanel = ({ filters, setFilters, roomTypes, setRoomTypes, amenities,
       </div>
 
       <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', gap:8 }}>
-        <button onClick={onClear} style={{ flex:1, padding:'8px', border:'1px solid var(--border)', borderRadius:8, background:'var(--surface)', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--text-sec)' }}>Clear All</button>
-        <button onClick={onApply} style={{ flex:1, padding:'8px', border:'none', borderRadius:8, background:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:600, color:'#fff' }}>Re-search</button>
+        <button onClick={onClear} disabled={!hasAnyFilters} style={{ flex:1, padding:'8px', border:'1px solid var(--border)', borderRadius:8, background:'var(--surface)', cursor:hasAnyFilters?'pointer':'default', fontSize:12, fontWeight:600, color:hasAnyFilters?'var(--text-sec)':'var(--text-muted)', opacity:hasAnyFilters?1:0.5 }}>Clear All</button>
+        <button onClick={handleApply} disabled={!hasPendingChanges} style={{ flex:1, padding:'8px', border:'none', borderRadius:8, background:hasPendingChanges?'var(--accent)':'var(--border)', cursor:hasPendingChanges?'pointer':'default', fontSize:12, fontWeight:600, color:hasPendingChanges?'#fff':'var(--text-muted)', transition:'all .15s' }}>Apply Filters</button>
       </div>
     </div>
   );
@@ -1026,7 +1041,7 @@ function App() {
   const [listingId, setListingId] = useState('');
   const [radius, setRadius] = useState('5000');
   const [limit, setLimit] = useState('25');
-  const [filters, setFilters] = useState({ minBed:'', maxBed:'', minBath:'', maxBath:'', minSleeps:'', maxSleeps:'', minRevenue:'', minOcc:'', minADR:'', minRating:'', minReviews:'' });
+  const [filters, setFilters] = useState(emptyFilters);
   const [selRoomTypes, setSelRoomTypes] = useState([]);
   const [selAmenities, setSelAmenities] = useState([]);
 
@@ -1222,9 +1237,15 @@ function App() {
   const updateA = (k,v) => setAssumptions(p=>({...p,[k]:v}));
 
   const clearFilters = () => {
-    setFilters({ minBed:'', maxBed:'', minBath:'', maxBath:'', minSleeps:'', maxSleeps:'', minRevenue:'', minOcc:'', minADR:'', minRating:'', minReviews:'' });
+    setFilters(emptyFilters);
     setSelRoomTypes([]);
     setSelAmenities([]);
+  };
+
+  const applyFilters = (newFilters, newRoomTypes, newAmenities) => {
+    setFilters(newFilters);
+    setSelRoomTypes(newRoomTypes);
+    setSelAmenities(newAmenities);
   };
 
   /* Demo data */
@@ -1409,7 +1430,7 @@ function App() {
 
           {/* Right filters sidebar — sticky */}
           <div style={{position:'sticky',top:16,alignSelf:'flex-start'}}>
-            <FiltersPanel filters={filters} setFilters={setFilters} roomTypes={selRoomTypes} setRoomTypes={setSelRoomTypes} amenities={selAmenities} setAmenities={setSelAmenities} availableAmenities={availableAmenities} onApply={handleSearch} onClear={clearFilters} totalCount={comps.length} filteredCount={filteredComps.length} />
+            <FiltersPanel filters={filters} applyFilters={applyFilters} roomTypes={selRoomTypes} setRoomTypes={setSelRoomTypes} amenities={selAmenities} setAmenities={setSelAmenities} availableAmenities={availableAmenities} onClear={clearFilters} totalCount={comps.length} filteredCount={filteredComps.length} />
           </div>
         </div>
       )}
