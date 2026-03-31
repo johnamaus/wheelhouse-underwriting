@@ -1999,107 +1999,103 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .page { width: 8.5in; min-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; }
     .page:last-child { page-break-after: avoid; }
 
-    /* ── COVER — Seastar-inspired ── */
-    .cover { display: flex; flex-direction: column; min-height: 11in; background: #f0ead6; }
-    .cover-top-bar { background: ${accentHex}; padding: 16px 30px; display: flex; justify-content: space-between; align-items: center; }
+    /* ── COLOR TOKENS ── */
+    :root { --dk: #3a3a3c; --gold: #b8976a; --body-bg: #f5f5f3; --card-bg: #fff; --text: #1d1d1f; --text-sec: #6e6e73; }
+
+    /* ── COVER ── */
+    .cover { display: flex; flex-direction: column; min-height: 11in; background: var(--body-bg); }
+    .cover-top-bar { background: var(--dk); padding: 14px 30px; display: flex; justify-content: space-between; align-items: center; }
     .cover-logo-area { display: flex; align-items: center; gap: 10px; }
-    .cover-logo-area img { height: 40px; width: auto; }
-    .cover-logo-area .co-name { color: #fff; font-size: 18px; font-weight: 800; }
+    .cover-logo-area img { height: 38px; width: auto; }
+    .cover-logo-area .co-name { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
     .cover-title-area { text-align: right; color: #fff; }
-    .cover-title-main { font-size: 22px; font-weight: 400; font-style: italic; }
-    .cover-title-addr { font-size: 11px; font-weight: 400; margin-top: 3px; opacity: 0.85; }
-    .cover-hero-wrap { width: 100%; height: 380px; overflow: hidden; border-top: 3px solid ${accentHex}; border-bottom: 3px solid ${accentHex}; position: relative; }
-    .cover-hero-wrap img { width: 100%; height: 100%; object-fit: cover; }
-    .cover-hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 30px; background: linear-gradient(transparent, rgba(0,0,0,0.6)); }
-    .cover-hero-addr { color: #fff; font-size: 26px; font-weight: 800; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
-    .cover-middle { padding: 24px 30px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid #d5cbb5; }
-    .cover-stats-left { display: flex; gap: 24px; align-items: center; }
-    .cover-stat-box { text-align: center; }
-    .cover-stat-num { font-size: 40px; font-weight: 800; color: #1a1a2e; }
-    .cover-stat-label { font-size: 10px; font-weight: 700; color: #6e6e73; letter-spacing: 0.08em; text-transform: uppercase; }
-    .cover-stat-divider { width: 1px; background: #c5b88a; height: 55px; }
-    .cover-revenue-area { flex: 1; text-align: right; }
-    .cover-revenue-label { font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
-    .cover-revenue-range { font-size: 38px; font-weight: 800; color: ${accentHex}; font-style: italic; letter-spacing: -0.01em; }
-    .cover-prepared-row { padding: 18px 30px; }
-    .cover-prepared-lbl { font-size: 9px; color: #6e6e73; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-    .cover-prepared-name { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-top: 3px; }
-    .cover-agent-bar { background: ${accentHex}; padding: 24px 30px; display: flex; align-items: center; gap: 18px; margin-top: auto; }
+    .cover-title-main { font-size: 28px; font-weight: 300; font-style: italic; letter-spacing: 0.02em; color: var(--gold); }
+    .cover-title-addr { font-size: 10px; font-weight: 400; margin-top: 2px; opacity: 0.75; letter-spacing: 0.06em; text-transform: uppercase; }
+    .cover-hero-section { display: flex; gap: 0; height: 380px; }
+    .cover-hero-main { flex: 2; overflow: hidden; }
+    .cover-hero-main img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-hero-side { flex: 1; display: flex; flex-direction: column; gap: 0; }
+    .cover-hero-side img { width: 100%; flex: 1; object-fit: cover; }
+    .cover-hero-single { width: 100%; height: 380px; overflow: hidden; }
+    .cover-hero-single img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-body { flex: 1; padding: 28px 30px 16px; display: flex; flex-direction: column; }
+    .cover-body-top { display: flex; gap: 30px; margin-bottom: 24px; }
+    .cover-body-left { flex: 1; }
+    .cover-prepared-lbl { font-size: 9px; color: var(--text-sec); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+    .cover-prepared-name { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+    .cover-desc-text { font-size: 10.5px; color: #4a4a4e; line-height: 1.65; }
+    .cover-body-right { width: 280px; text-align: right; display: flex; flex-direction: column; justify-content: flex-start; }
+    .cover-revenue-label { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .cover-revenue-range { font-size: 34px; font-weight: 800; color: var(--gold); font-style: italic; letter-spacing: -0.01em; margin-bottom: 16px; }
+    .cover-features { list-style: none; }
+    .cover-features li { font-size: 11px; color: var(--text); padding: 5px 0; display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    .cover-features li .check { color: var(--gold); font-weight: 700; font-size: 14px; }
+    .cover-agent-bar { background: var(--dk); padding: 18px 30px; display: flex; align-items: center; gap: 16px; margin-top: auto; }
     .cover-agent-cta { flex: 1; color: #fff; }
-    .cover-agent-cta .cta-head { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .cover-agent-cta .cta-text { font-size: 10.5px; opacity: 0.85; line-height: 1.55; }
-    .cover-agent-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; }
+    .cover-agent-cta .cta-head { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .cover-agent-cta .cta-text { font-size: 10px; opacity: 0.75; line-height: 1.5; }
+    .cover-agent-photo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
     .cover-agent-details { color: #fff; text-align: right; }
-    .cover-agent-name { font-size: 20px; font-weight: 700; font-style: italic; }
-    .cover-agent-title { font-size: 11px; opacity: 0.85; }
-    .cover-agent-contact { font-size: 11px; opacity: 0.85; margin-top: 2px; }
-    .cover-disclaimer { padding: 10px 30px; font-size: 7.5px; color: #6e6e73; text-align: center; font-style: italic; line-height: 1.4; border-top: 1px solid #d5cbb5; }
-    .cover-footer { text-align: center; padding: 6px 30px 12px; font-size: 9px; color: #6e6e73; }
+    .cover-agent-name { font-size: 16px; font-weight: 700; color: var(--gold); }
+    .cover-agent-contact { font-size: 10px; opacity: 0.75; margin-top: 2px; }
+    .cover-disclaimer { padding: 8px 30px; font-size: 7px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.4; }
+    .cover-footer { background: var(--dk); text-align: center; padding: 8px 30px; font-size: 9px; color: rgba(255,255,255,0.6); }
 
     /* ── PAGE HEADER ── */
-    .pg-header { padding: 20px 30px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid ${accentHex}; margin: 0 0 20px; }
+    .pg-header { padding: 20px 30px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--dk); margin: 0 0 20px; }
     .pg-header-title { font-size: 18px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.02em; }
     .pg-header-sub { font-size: 9px; color: #8b8b9e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
     .pg-body { padding: 0 30px 20px; }
 
-    /* ── PAGE 2: COMPANY — Seastar-inspired ── */
-    .p2 { background: #f0ead6; display: flex; flex-direction: column; }
-    .p2-top-bar { background: ${accentHex}; padding: 16px 30px; display: flex; justify-content: space-between; align-items: center; }
+    /* ── PAGE 2: COMPANY ── */
+    .p2 { background: var(--body-bg); display: flex; flex-direction: column; }
+    .p2-top-bar { background: var(--dk); padding: 14px 30px; display: flex; justify-content: space-between; align-items: center; }
     .p2-logo-area { display: flex; align-items: center; gap: 10px; }
-    .p2-logo-area img { height: 40px; width: auto; }
-    .p2-logo-area .co-name { color: #fff; font-size: 18px; font-weight: 800; }
-    .p2-page-label { color: #fff; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
-    .p2-split { display: flex; height: 340px; }
-    .p2-img-col { width: 50%; overflow: hidden; }
-    .p2-img-col img { width: 100%; height: 100%; object-fit: cover; }
-    .p2-info-col { width: 50%; padding: 36px 28px; display: flex; flex-direction: column; justify-content: center; }
-    .p2-addr { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-bottom: 4px; }
-    .p2-addr-sub { font-size: 13px; color: #6e6e73; margin-bottom: 24px; }
-    .p2-stat-row { display: flex; gap: 28px; }
-    .p2-stat-item { display: flex; align-items: center; gap: 10px; }
-    .p2-stat-val { font-size: 34px; font-weight: 800; color: #1a1a2e; }
-    .p2-stat-lbl { font-size: 10px; font-weight: 700; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.05em; }
-    .p2-desc-section { background: ${accentHex}; color: #fff; padding: 30px 30px; display: flex; gap: 24px; }
-    .p2-desc-left { flex: 1; }
-    .p2-desc-title { font-size: 22px; font-weight: 800; font-style: italic; margin-bottom: 14px; }
-    .p2-desc-text { font-size: 11px; line-height: 1.7; opacity: 0.9; }
-    .p2-desc-right { width: 240px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 24px; }
-    .p2-desc-right .rev-label { font-size: 11px; font-weight: 600; margin-bottom: 6px; opacity: 0.85; }
-    .p2-desc-right .rev-range { font-size: 28px; font-weight: 800; font-style: italic; }
-    .p2-highlights { padding: 22px 30px; }
-    .p2-hl-title { font-size: 11px; font-weight: 700; color: ${accentHex}; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
-    .p2-hl-row { display: flex; gap: 12px; }
-    .p2-hl-card { flex: 1; border: 2px solid ${accentHex}; border-radius: 8px; padding: 16px 14px; display: flex; align-items: center; justify-content: space-between; background: #fff; }
-    .p2-hl-card .hl-text { font-size: 11px; font-weight: 600; color: #1a1a2e; }
-    .p2-hl-card .hl-num { font-size: 26px; font-weight: 300; color: ${accentHex}; opacity: 0.35; }
-    .p2-agent-bar { background: ${accentHex}; padding: 24px 30px; display: flex; align-items: center; gap: 18px; margin-top: auto; }
-    .p2-agent-cta { flex: 1; color: #fff; }
-    .p2-agent-cta .cta-head { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .p2-agent-cta .cta-text { font-size: 10.5px; opacity: 0.85; line-height: 1.55; }
-    .p2-agent-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; }
-    .p2-agent-details { color: #fff; text-align: right; }
-    .p2-agent-name { font-size: 20px; font-weight: 700; font-style: italic; }
-    .p2-agent-title { font-size: 11px; opacity: 0.85; }
-    .p2-agent-contact { font-size: 11px; opacity: 0.85; margin-top: 2px; }
-    .p2-footer { text-align: center; padding: 6px 30px 12px; font-size: 9px; color: #6e6e73; background: #f0ead6; }
+    .p2-logo-area img { height: 38px; width: auto; }
+    .p2-logo-area .co-name { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+    .p2-page-label { color: rgba(255,255,255,0.6); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+    .p2-banner { width: 100%; height: 260px; overflow: hidden; }
+    .p2-banner img { width: 100%; height: 100%; object-fit: cover; }
+    .p2-body { padding: 28px 30px; flex: 1; display: flex; flex-direction: column; }
+    .p2-company-name { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; font-style: italic; }
+    .p2-company-tagline { font-size: 10px; color: var(--gold); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; }
+    .p2-desc-text { font-size: 11px; color: #4a4a4e; line-height: 1.7; margin-bottom: 24px; }
+    .p2-two-col { display: flex; gap: 30px; margin-bottom: 24px; }
+    .p2-hl-section { flex: 1; }
+    .p2-hl-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 12px; font-style: italic; }
+    .p2-hl-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .p2-hl-icon { color: var(--gold); font-size: 16px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .p2-hl-text { font-size: 10.5px; color: #4a4a4e; line-height: 1.5; }
+    .p2-hl-text strong { color: var(--text); font-weight: 700; }
+    .p2-agent-section { flex: 1; }
+    .p2-agent-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 12px; font-style: italic; }
+    .p2-agent-card { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 16px; }
+    .p2-agent-card img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+    .p2-agent-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .p2-agent-role { font-size: 9px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .p2-agent-info { font-size: 10px; color: var(--text-sec); margin-top: 2px; }
+    .p2-revenue-bar { background: var(--dk); padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+    .p2-revenue-bar .rev-cta { color: #fff; font-size: 14px; font-weight: 700; }
+    .p2-revenue-bar .rev-range { color: var(--gold); font-size: 28px; font-weight: 800; font-style: italic; }
+    .p2-footer { background: var(--dk); text-align: center; padding: 8px 30px; font-size: 9px; color: rgba(255,255,255,0.6); }
 
     /* ── PAGE 3: PROJECTIONS ── */
-    .section-title { font-size: 11px; font-weight: 800; color: ${accentHex}; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .section-title { font-size: 11px; font-weight: 800; color: var(--dk); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
     .data-table { width: 100%; border-collapse: collapse; font-size: 7.5px; margin-bottom: 10px; }
-    .data-table thead th { padding: 6px 4px; text-align: center; font-weight: 700; color: #fff; background: ${accentHex}; font-size: 7px; border: none; }
+    .data-table thead th { padding: 6px 4px; text-align: center; font-weight: 700; color: #fff; background: var(--dk); font-size: 7px; border: none; }
     .data-table thead th:first-child { border-radius: 4px 0 0 0; text-align: left; padding-left: 8px; }
     .data-table thead th:last-child { border-radius: 0 4px 0 0; }
     .data-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid #eee; font-weight: 500; }
     .data-table tbody tr:nth-child(even) { background: #fafafe; }
     .data-table .scenario-label { text-align: left; font-weight: 700; color: #1a1a2e; padding-left: 8px; }
     .data-table .conservative { color: #EA580C; font-weight: 700; }
-    .data-table .base { color: ${accentHex}; font-weight: 700; }
-    .data-table .aggressive { color: ${accent2Hex}; font-weight: 700; }
+    .data-table .base { color: var(--dk); font-weight: 700; }
+    .data-table .aggressive { color: #16a34a; font-weight: 700; }
     .charts-row { display: flex; gap: 12px; margin-top: 10px; }
     .charts-row > div { flex: 1; background: #fafafe; border-radius: 8px; padding: 8px; border: 1px solid #eee; }
 
     /* ── PAGE 4: COMPS ── */
-    .comp-card { border: 1px solid #e5e5ef; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border-left: 4px solid ${accentHex}; background: #fafafe; }
+    .comp-card { border: 1px solid #e5e5ef; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border-left: 4px solid var(--dk); background: #fafafe; }
     .comp-card-name { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
     .comp-card-meta { font-size: 9px; color: #8b8b9e; margin-bottom: 8px; font-weight: 500; }
     .comp-card-revenue { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -2120,26 +2116,30 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo" onerror="this.style.display='none'">` : `<span class="co-name">${companyName || ''}</span>`}
     </div>
     <div class="cover-title-area">
-      <div class="cover-title-main">Annual Rental Projection</div>
-      <div class="cover-title-addr">${propAddr}</div>
+      <div class="cover-title-main">${fmtUSD(conservativeAnnual)} – ${fmtUSD(aggressiveAnnual)}*</div>
+      <div class="cover-title-addr">Annual Rental Revenue Projection</div>
     </div>
   </div>
-  <div class="cover-hero-wrap">
-    ${heroImageData ? `<img src="${heroImageData}" alt="Property" onerror="this.parentElement.style.background='#d5cbb5'">` : `<div style="width:100%;height:100%;background:#d5cbb5;display:flex;align-items:center;justify-content:center;color:#999;font-size:14px;">Property Image</div>`}
-    ${heroImageData ? `<div class="cover-hero-overlay"><div class="cover-hero-addr">${propAddr}</div></div>` : ''}
+  <div class="cover-hero-single">
+    ${heroImageData ? `<img src="${heroImageData}" alt="Property">` : `<div style="width:100%;height:100%;background:#ddd;"></div>`}
   </div>
-  <div class="cover-middle">
-    <div class="cover-stats-left">
-      ${projection?.medBeds ? `<div class="cover-stat-box"><div class="cover-stat-num">${Math.round(projection.medBeds)}</div><div class="cover-stat-label">Beds</div></div>` : ''}
-      ${projection?.medBeds && projection?.medBaths ? `<div class="cover-stat-divider"></div>` : ''}
-      ${projection?.medBaths ? `<div class="cover-stat-box"><div class="cover-stat-num">${Math.round(projection.medBaths)}</div><div class="cover-stat-label">Baths</div></div>` : ''}
-    </div>
-    <div class="cover-revenue-area">
-      <div class="cover-revenue-label">Annual Rental Projection Range:</div>
-      <div class="cover-revenue-range">${fmtUSD(conservativeAnnual)} – ${fmtUSD(aggressiveAnnual)}*</div>
+  <div class="cover-body">
+    <div class="cover-body-top">
+      <div class="cover-body-left">
+        ${ownerName ? `<div class="cover-prepared-lbl">Prepared for</div><div class="cover-prepared-name">${ownerName}</div>` : ''}
+        <div class="cover-desc-text">${companyDesc || `Our team provides professional property management services designed to maximize your vacation rental income. From dynamic pricing and guest communication to maintenance and revenue optimization, we handle it all.`}</div>
+      </div>
+      <div class="cover-body-right">
+        <div class="cover-revenue-label">Annual Rental Projection Range:</div>
+        <div class="cover-revenue-range">${fmtUSD(conservativeAnnual)} – ${fmtUSD(aggressiveAnnual)}*</div>
+        <ul class="cover-features">
+          ${projection?.medBeds ? `<li><span class="check">✓</span> ${Math.round(projection.medBeds)} Bedrooms</li>` : ''}
+          ${projection?.medBaths ? `<li><span class="check">✓</span> ${Math.round(projection.medBaths)} Bathrooms</li>` : ''}
+          <li><span class="check">✓</span> ${propAddr.split(',')[0]}</li>
+        </ul>
+      </div>
     </div>
   </div>
-  ${ownerName ? `<div class="cover-prepared-row"><div class="cover-prepared-lbl">Prepared for</div><div class="cover-prepared-name">${ownerName}</div></div>` : ''}
   <div class="cover-agent-bar">
     <div class="cover-agent-cta">
       <div class="cta-head">Contact us to get started today.</div>
@@ -2164,46 +2164,35 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     </div>
     <div class="p2-page-label">Company Overview</div>
   </div>
-  <div class="p2-split">
-    <div class="p2-img-col">
-      ${companyImageData ? `<img src="${companyImageData}" alt="Company" onerror="this.style.display='none'">` : heroImageData ? `<img src="${heroImageData}" alt="Property" onerror="this.style.display='none'">` : `<div style="width:100%;height:100%;background:#d5cbb5;"></div>`}
-    </div>
-    <div class="p2-info-col">
-      <div class="p2-addr">${propAddr.split(',')[0] || propAddr}</div>
-      <div class="p2-addr-sub">${propAddr.split(',').slice(1).join(',').trim() || ''}</div>
-      <div class="p2-stat-row">
-        ${projection?.medBeds ? `<div class="p2-stat-item"><div class="p2-stat-val">${Math.round(projection.medBeds)}</div><div class="p2-stat-lbl">Beds</div></div>` : ''}
-        ${projection?.medBaths ? `<div class="p2-stat-item"><div class="p2-stat-val">${Math.round(projection.medBaths)}</div><div class="p2-stat-lbl">Baths</div></div>` : ''}
-      </div>
+  <div class="p2-banner">
+    ${companyImageData ? `<img src="${companyImageData}" alt="Company" onerror="this.style.display='none'">` : heroImageData ? `<img src="${heroImageData}" alt="Property" onerror="this.style.display='none'">` : `<div style="width:100%;height:100%;background:#ddd;"></div>`}
+  </div>
+  <div class="p2-body">
+    <div class="p2-company-name">${companyName || 'Our Company'}</div>
+    <div class="p2-company-tagline">${propAddr}</div>
+    <div class="p2-desc-text">${companyDesc || 'Professional property management services tailored for success. Our experienced local team handles everything from dynamic pricing and guest communication to cleaning, maintenance, and revenue optimization.'}</div>
+    <div class="p2-two-col">
+      ${highlights && highlights.length > 0 ? `<div class="p2-hl-section">
+        <div class="p2-hl-title">Why Choose Us</div>
+        ${highlights.map(h => `<div class="p2-hl-item"><span class="p2-hl-icon">✓</span><div class="p2-hl-text"><strong>${h}</strong></div></div>`).join('')}
+      </div>` : ''}
+      ${agentName ? `<div class="p2-agent-section">
+        <div class="p2-agent-title">Your Dedicated Agent</div>
+        <div class="p2-agent-card">
+          ${agentImageData ? `<img src="${agentImageData}" alt="Agent" onerror="this.style.display='none'">` : ''}
+          <div>
+            <div class="p2-agent-role">Sales Agent</div>
+            <div class="p2-agent-name">${agentName}</div>
+            ${agentPhone ? `<div class="p2-agent-info">${agentPhone}</div>` : ''}
+            ${agentEmail ? `<div class="p2-agent-info">${agentEmail}</div>` : ''}
+          </div>
+        </div>
+      </div>` : ''}
     </div>
   </div>
-  <div class="p2-desc-section">
-    <div class="p2-desc-left">
-      <div class="p2-desc-title">${companyName || 'Our Approach'}</div>
-      <div class="p2-desc-text">${companyDesc || 'Professional property management services tailored for success.'}</div>
-    </div>
-    <div class="p2-desc-right">
-      <div class="rev-label">Annual Rental Projection Range:</div>
-      <div class="rev-range">${fmtUSD(conservativeAnnual)} – ${fmtUSD(aggressiveAnnual)}</div>
-    </div>
-  </div>
-  ${highlights && highlights.length > 0 ? `<div class="p2-highlights">
-    <div class="p2-hl-title">Why Choose Us</div>
-    <div class="p2-hl-row">
-      ${highlights.map((h, i) => `<div class="p2-hl-card"><div class="hl-text">${h}</div><div class="hl-num">${i + 1}</div></div>`).join('')}
-    </div>
-  </div>` : ''}
-  <div class="p2-agent-bar">
-    <div class="p2-agent-cta">
-      <div class="cta-head">Contact us to get started today.</div>
-      <div class="cta-text">Our local team of experts is ready and excited to help you make the most of your vacation rental investment.</div>
-    </div>
-    ${agentImageData ? `<img class="p2-agent-photo" src="${agentImageData}" alt="Agent" onerror="this.style.display='none'">` : ''}
-    ${agentName ? `<div class="p2-agent-details">
-      <div class="p2-agent-name">${agentName}</div>
-      ${agentPhone ? `<div class="p2-agent-contact">${agentPhone}</div>` : ''}
-      ${agentEmail ? `<div class="p2-agent-contact">${agentEmail}</div>` : ''}
-    </div>` : ''}
+  <div class="p2-revenue-bar">
+    <div class="rev-cta">Annual Rental Projection Range:</div>
+    <div class="rev-range">${fmtUSD(conservativeAnnual)} – ${fmtUSD(aggressiveAnnual)}</div>
   </div>
   <div class="p2-footer">${companyName || ''} · ${dateStr}</div>
 </div>
