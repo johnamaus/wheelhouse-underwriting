@@ -1140,6 +1140,9 @@ ${type === 'full-report' ? `
   tempDiv.innerHTML = htmlContent;
   document.body.appendChild(tempDiv);
 
+  // Remove dashed page break borders for PDF
+  tempDiv.querySelectorAll('.page').forEach(p => { p.style.borderTop = 'none'; });
+
   const filename = extras?.reportName || 'revenue_projection';
   const safeFilename = (filename || 'report').replace(/[^a-zA-Z0-9]/g, '_');
 
@@ -2005,6 +2008,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .page { width: 8.5in; min-height: 11in; max-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; }
     .page:last-child { page-break-after: avoid; }
     .page + .page { border-top: 3px dashed #ccc; }
+    @media print { .page + .page { border-top: none; } }
 
     /* ── COLOR TOKENS ── */
     :root { --dk: #3a3a3c; --gold: #b8976a; --tan: #e8e0d0; --body-bg: #fff; --text: #1d1d1f; --text-sec: #6e6e73; }
@@ -2041,7 +2045,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .cover-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
     .cover-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
     .cover-agent-contact .icon { color: var(--gold); font-size: 13px; }
-    .cover-agent-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); image-rendering: -webkit-optimize-contrast; }
+    .cover-agent-photo { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); image-rendering: -webkit-optimize-contrast; }
     .cover-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
     /* ── PAGE HEADER (pages 3-4) ── */
@@ -2088,32 +2092,42 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .p2-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
     .p2-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
     .p2-agent-contact .icon { color: var(--gold); font-size: 13px; }
-    .p2-agent-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); image-rendering: -webkit-optimize-contrast; }
+    .p2-agent-photo { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); image-rendering: -webkit-optimize-contrast; }
     .p2-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
     /* ── PAGE 3: PROJECTIONS ── */
-    .section-title { font-size: 11px; font-weight: 800; color: var(--dk); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 7.5px; margin-bottom: 10px; }
-    .data-table thead th { padding: 6px 4px; text-align: center; font-weight: 700; color: #fff; background: var(--dk); font-size: 7px; border: none; }
+    .scenario-block { margin-bottom: 10px; }
+    .scenario-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .scenario-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .scenario-dot.conservative { background: #EA580C; }
+    .scenario-dot.base { background: #7c3aed; }
+    .scenario-dot.aggressive { background: #16a34a; }
+    .scenario-name { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+    .scenario-name.conservative { color: #EA580C; }
+    .scenario-name.base { color: #7c3aed; }
+    .scenario-name.aggressive { color: #16a34a; }
+    .scenario-annual { font-size: 10px; color: var(--text-sec); margin-left: auto; font-weight: 600; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 7.5px; margin-bottom: 0; }
+    .data-table thead th { padding: 5px 4px; text-align: center; font-weight: 700; color: #fff; font-size: 7px; border: none; }
     .data-table thead th:first-child { border-radius: 4px 0 0 0; text-align: left; padding-left: 8px; }
     .data-table thead th:last-child { border-radius: 0 4px 0 0; }
-    .data-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid #eee; font-weight: 500; }
+    .data-table.conservative thead th { background: #EA580C; }
+    .data-table.base thead th { background: #7c3aed; }
+    .data-table.aggressive thead th { background: #16a34a; }
+    .data-table td { padding: 4px 4px; text-align: center; border-bottom: 1px solid #eee; font-weight: 500; }
     .data-table tbody tr:nth-child(even) { background: #fafafe; }
-    .data-table .scenario-label { text-align: left; font-weight: 700; color: #1a1a2e; padding-left: 8px; }
-    .data-table .conservative { color: #EA580C; font-weight: 700; }
-    .data-table .base { color: var(--dk); font-weight: 700; }
-    .data-table .aggressive { color: #16a34a; font-weight: 700; }
-    .charts-row { display: flex; gap: 12px; margin-top: 10px; }
-    .charts-row > div { flex: 1; background: #fafafe; border-radius: 8px; padding: 8px; border: 1px solid #eee; }
+    .data-table .row-label { text-align: left; font-weight: 700; color: #1a1a2e; padding-left: 8px; font-size: 7px; }
+    .charts-row { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .charts-row > div { background: #fafafe; border-radius: 8px; padding: 8px; border: 1px solid #eee; }
 
     /* ── PAGE 4: COMPS ── */
-    .comp-card { border: 1px solid #e5e5ef; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border-left: 4px solid var(--dk); background: #fafafe; }
-    .comp-card-name { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
-    .comp-card-meta { font-size: 9px; color: #8b8b9e; margin-bottom: 8px; font-weight: 500; }
-    .comp-card-revenue { display: flex; gap: 5px; flex-wrap: wrap; }
-    .comp-month { background: #fff; border: 1px solid #e5e5ef; border-radius: 4px; padding: 3px 6px; font-size: 7.5px; text-align: center; }
-    .comp-month-label { color: #8b8b9e; font-weight: 600; }
-    .comp-month-value { color: #1a1a2e; font-weight: 700; }
+    .p4-title { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .comp-block { margin-bottom: 10px; }
+    .comp-block-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .comp-block-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dk); }
+    .comp-block-name { font-size: 11px; font-weight: 800; color: var(--text); }
+    .comp-block-meta { font-size: 9px; color: var(--text-sec); margin-left: auto; font-weight: 600; }
+    .data-table.comp thead th { background: var(--dk); }
 
     .disclaimer { font-size: 7px; color: #b0b0c0; line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5e5ef; }
   </style>
@@ -2223,39 +2237,31 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     </div>
   </div>
   <div class="pg-body">
-    <div class="section-title">Monthly Rental Revenue</div>
-    <table class="data-table">
-      <thead><tr><th>Scenario</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Annual</th></tr></thead>
-      <tbody>
-        ${['conservative','base','aggressive'].map(key => {
-          const vals = monthlyRentals[key];
-          const annual = vals.reduce((a,b)=>a+b,0);
-          return `<tr><td class="scenario-label">${key.charAt(0).toUpperCase()+key.slice(1)}</td>${vals.map(v=>`<td class="${key}">${fmtUSD(v)}</td>`).join('')}<td class="${key}">${fmtUSD(annual)}</td></tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    <div class="section-title">Monthly Occupancy (%)</div>
-    <table class="data-table">
-      <thead><tr><th>Scenario</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Avg</th></tr></thead>
-      <tbody>
-        ${['conservative','base','aggressive'].map(key => {
-          const vals = monthlyOcc[key];
-          const avg = vals.reduce((a,b)=>a+b,0)/12;
-          return `<tr><td class="scenario-label">${key.charAt(0).toUpperCase()+key.slice(1)}</td>${vals.map(v=>`<td class="${key}">${v.toFixed(1)}%</td>`).join('')}<td class="${key}">${avg.toFixed(1)}%</td></tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    <div class="section-title">Monthly ADR</div>
-    <table class="data-table">
-      <thead><tr><th>Scenario</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Avg</th></tr></thead>
-      <tbody>
-        ${['conservative','base','aggressive'].map(key => {
-          const vals = monthlyADR[key];
-          const avg = vals.reduce((a,b)=>a+b,0)/12;
-          return `<tr><td class="scenario-label">${key.charAt(0).toUpperCase()+key.slice(1)}</td>${vals.map(v=>`<td class="${key}">${fmtUSD(Math.round(v))}</td>`).join('')}<td class="${key}">${fmtUSD(Math.round(avg))}</td></tr>`;
-        }).join('')}
-      </tbody>
-    </table>
+    ${['conservative','base','aggressive'].map(key => {
+      const label = key === 'conservative' ? 'Conservative Case' : key === 'base' ? 'Base Case' : 'Aggressive Case';
+      const revVals = monthlyRentals[key];
+      const occVals = monthlyOcc[key];
+      const adrVals = monthlyADR[key];
+      const annualRev = revVals.reduce((a,b)=>a+b,0);
+      const avgOcc = occVals.reduce((a,b)=>a+b,0)/12;
+      const avgADR = adrVals.reduce((a,b)=>a+b,0)/12;
+      return `
+      <div class="scenario-block">
+        <div class="scenario-header">
+          <div class="scenario-dot ${key}"></div>
+          <div class="scenario-name ${key}">${label}</div>
+          <div class="scenario-annual">Annual Revenue: ${fmtUSD(annualRev)}</div>
+        </div>
+        <table class="data-table ${key}">
+          <thead><tr><th>Metric</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Total</th></tr></thead>
+          <tbody>
+            <tr><td class="row-label">Revenue</td>${revVals.map(v=>`<td>${fmtUSD(v)}</td>`).join('')}<td style="font-weight:700">${fmtUSD(annualRev)}</td></tr>
+            <tr><td class="row-label">Occupancy</td>${occVals.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}<td style="font-weight:700">${avgOcc.toFixed(1)}%</td></tr>
+            <tr><td class="row-label">ADR</td>${adrVals.map(v=>`<td>${fmtUSD(Math.round(v))}</td>`).join('')}<td style="font-weight:700">${fmtUSD(Math.round(avgADR))}</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+    }).join('')}
     <div class="charts-row">
       <div>${revChart}</div>
       <div>${occChart}</div>
@@ -2277,18 +2283,29 @@ ${includeComps && reportCompList.length > 0 ? `
     </div>
   </div>
   <div class="pg-body">
+    <div class="p4-title">Comparable Property Detail</div>
     ${reportCompList.map(c => {
       const compRevenue = c.nrevenue_365_0 || 0;
       const compOcc = c.occupancy_365_0 || 0;
       const compADR = c.anr_365_0 || 0;
       const monthlyRevEst = MONTHS.map((_, i) => Math.round(compRevenue * SEASON_REV[i] / 12));
+      const monthlyOccEst = MONTHS.map((_, i) => (compOcc * 100 * SEASON_REV[i]).toFixed(1));
+      const monthlyADREst = MONTHS.map((_, i) => Math.round(compADR * (0.85 + 0.3 * SEASON_REV[i])));
       return `
-      <div class="comp-card">
-        <div class="comp-card-name">${(c.title || 'Comp').substring(0, 50)} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
-        <div class="comp-card-meta">Annual Revenue: ${fmtUSD(Math.round(compRevenue))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
-        <div class="comp-card-revenue">
-          ${monthlyRevEst.map((v, i) => `<div class="comp-month"><div class="comp-month-label">${MONTHS[i]}</div><div class="comp-month-value">${fmtUSD(v)}</div></div>`).join('')}
+      <div class="comp-block">
+        <div class="comp-block-header">
+          <div class="comp-block-dot"></div>
+          <div class="comp-block-name">${(c.title || 'Comp').substring(0, 50)} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
+          <div class="comp-block-meta">Annual: ${fmtUSD(Math.round(compRevenue))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
         </div>
+        <table class="data-table comp">
+          <thead><tr><th>Metric</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Total</th></tr></thead>
+          <tbody>
+            <tr><td class="row-label">Revenue</td>${monthlyRevEst.map(v=>`<td>${fmtUSD(v)}</td>`).join('')}<td style="font-weight:700">${fmtUSD(Math.round(compRevenue))}</td></tr>
+            <tr><td class="row-label">Occupancy</td>${monthlyOccEst.map(v=>`<td>${v}%</td>`).join('')}<td style="font-weight:700">${(compOcc * 100).toFixed(1)}%</td></tr>
+            <tr><td class="row-label">ADR</td>${monthlyADREst.map(v=>`<td>${fmtUSD(v)}</td>`).join('')}<td style="font-weight:700">${fmtUSD(Math.round(compADR))}</td></tr>
+          </tbody>
+        </table>
       </div>`;
     }).join('')}
   </div>
