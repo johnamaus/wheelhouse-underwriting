@@ -359,11 +359,16 @@ def admin_add_email():
     if not email or "@" not in email:
         return jsonify({"error": "Valid email is required"}), 400
     db = get_db()
+    is_admin = data.get("is_admin", False)
     existing = db.execute("SELECT id FROM allowed_emails WHERE email = ?", (email,)).fetchone()
     if existing:
         return jsonify({"error": "Email already in the allowed list"}), 409
     db.execute("INSERT INTO allowed_emails (email, created_at) VALUES (?, ?)",
                (email, datetime.utcnow().isoformat()))
+    # If marking as admin and user already has an account, set their admin flag
+    if is_admin:
+        db.execute("UPDATE users SET is_admin = 1 WHERE email = ?", (email,))
+        ADMIN_EMAILS.add(email)
     db.commit()
     return jsonify({"ok": True, "email": email})
 

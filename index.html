@@ -1247,6 +1247,7 @@ function ProfilePanel({ authUser, onLogout, setAuthUser }) {
 function AdminPanel() {
   const [emails, setEmails] = useState([]);
   const [newEmail, setNewEmail] = useState('');
+  const [newEmailAdmin, setNewEmailAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -1269,12 +1270,12 @@ function AdminPanel() {
       const r = await fetch('/api/admin/allowed-emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newEmail.trim() }),
+        body: JSON.stringify({ email: newEmail.trim(), is_admin: newEmailAdmin }),
       });
       const data = await r.json();
       if (r.ok) {
-        setSuccess(`Added ${newEmail.trim()}`);
-        setNewEmail('');
+        setSuccess(`Added ${newEmail.trim()}${newEmailAdmin ? ' as admin' : ''}`);
+        setNewEmail(''); setNewEmailAdmin(false);
         loadEmails();
       } else {
         setError(data.error || 'Failed to add email');
@@ -1314,8 +1315,11 @@ function AdminPanel() {
       <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Manage Allowed Emails</h2>
       <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:20 }}>Only these email addresses can sign up for an account.</p>
 
-      <form onSubmit={addEmail} style={{ display:'flex', gap:8, marginBottom:20 }}>
-        <input type="email" placeholder="Enter email address" value={newEmail} onChange={e=>setNewEmail(e.target.value)} style={inputStyle} required />
+      <form onSubmit={addEmail} style={{ display:'flex', gap:8, marginBottom:20, alignItems:'center' }}>
+        <input type="email" placeholder="Enter email address" value={newEmail} onChange={e=>setNewEmail(e.target.value)} style={{...inputStyle, flex:1}} required />
+        <label style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--text-sec)',fontWeight:500,cursor:'pointer',whiteSpace:'nowrap',padding:'0 4px'}}>
+          <input type="checkbox" checked={newEmailAdmin} onChange={e=>setNewEmailAdmin(e.target.checked)} style={{accentColor:'var(--accent)'}} /> Admin
+        </label>
         <button type="submit" style={{ background:'var(--accent)', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>Add Email</button>
       </form>
 
