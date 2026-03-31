@@ -1372,6 +1372,571 @@ function AdminPanel() {
   );
 }
 
+/* ═══════════════ REPORT PANEL ═══════════════ */
+function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality }) {
+  const [ownerName, setOwnerName] = useState('');
+  const [heroImage, setHeroImage] = useState(null);
+  const [companyName, setCompanyName] = useState(pmCompany?.name || '');
+  const [companyLogo, setCompanyLogo] = useState(null);
+  const [companyImage, setCompanyImage] = useState(null);
+  const [companyDesc, setCompanyDesc] = useState('');
+  const [highlight1, setHighlight1] = useState('');
+  const [highlight2, setHighlight2] = useState('');
+  const [highlight3, setHighlight3] = useState('');
+  const [agentName, setAgentName] = useState('');
+  const [agentImage, setAgentImage] = useState(null);
+  const [agentEmail, setAgentEmail] = useState('');
+  const [agentPhone, setAgentPhone] = useState('');
+  const [includeComps, setIncludeComps] = useState(false);
+  const [reportComps, setReportComps] = useState(new Set());
+  const [generating, setGenerating] = useState(false);
+
+  // Sync PM name if changed
+  useEffect(() => { if (pmCompany?.name && !companyName) setCompanyName(pmCompany.name); }, [pmCompany?.name]);
+
+  const handleFileUpload = (setter) => (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setter(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const toggleComp = (id) => {
+    setReportComps(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 5) next.add(id);
+      return next;
+    });
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const reportExtras = {
+        ownerName,
+        heroImageData: heroImage,
+        companyName,
+        companyLogoData: companyLogo,
+        companyImageData: companyImage,
+        companyDesc,
+        highlights: [highlight1, highlight2, highlight3].filter(Boolean),
+        agentName,
+        agentImageData: agentImage,
+        agentEmail,
+        agentPhone,
+        includeComps,
+        selectedCompIds: [...reportComps],
+      };
+      await generateReport(projection, assumptions, comps, selectedComps, pmCompany, address, seasonality, reportExtras);
+    } catch(e) { console.error('Report generation failed:', e); }
+    setGenerating(false);
+  };
+
+  const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%' };
+  const labelStyle = { fontSize:12, color:'var(--text-sec)', fontWeight:500, display:'block', marginBottom:4 };
+  const sectionStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24, marginBottom:16 };
+
+  const hasProjection = projection && projection.medRevenue > 0;
+  const conservativeRev = hasProjection ? Math.round(projection.medRevenue * 0.85) : 0;
+  const aggressiveRev = hasProjection ? Math.round(projection.medRevenue * 1.15) : 0;
+
+  return (
+    <div style={{maxWidth:900,margin:'0 auto'}}>
+      <div style={{marginBottom:20}}>
+        <h2 style={{fontSize:20,fontWeight:700,marginBottom:4}}>Generate Report</h2>
+        <p style={{fontSize:13,color:'var(--text-muted)'}}>Fill in the details below to create a professional PDF report.</p>
+        {!hasProjection && <div style={{background:'#fff3cd',border:'1px solid #ffc107',borderRadius:8,padding:'10px 14px',fontSize:13,color:'#856404',marginTop:10}}>Run a search and select comps first to include projection data in your report.</div>}
+      </div>
+
+      {/* Cover Page Info */}
+      <div style={sectionStyle}>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Cover Page</h3>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+          <div style={{gridColumn:'1/-1'}}>
+            <label style={labelStyle}>Listing Address</label>
+            <input value={address || ''} disabled style={{...inputStyle,background:'var(--surface2)',color:'var(--text-muted)'}} />
+          </div>
+          <div style={{gridColumn:'1/-1'}}>
+            <label style={labelStyle}>Listing Hero Image</label>
+            <input type="file" accept="image/*" onChange={handleFileUpload(setHeroImage)} style={{fontSize:13}} />
+            {heroImage && <img src={heroImage} style={{marginTop:8,maxHeight:120,borderRadius:8,objectFit:'cover'}} alt="Hero preview" />}
+          </div>
+          <div>
+            <label style={labelStyle}>Prepared For (Owner Name)</label>
+            <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. John Smith" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Annual Revenue Range</label>
+            <input value={hasProjection ? `$${conservativeRev.toLocaleString()} — $${aggressiveRev.toLocaleString()}` : 'No projection data'} disabled style={{...inputStyle,background:'var(--surface2)',color:'var(--text-muted)'}} />
+          </div>
+        </div>
+      </div>
+
+      {/* Company Info */}
+      <div style={sectionStyle}>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Property Management Company</h3>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+          <div>
+            <label style={labelStyle}>Company Name</label>
+            <input value={companyName} onChange={e=>setCompanyName(e.target.value)} placeholder="e.g. Wheelhouse" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Company Logo</label>
+            <input type="file" accept="image/*" onChange={handleFileUpload(setCompanyLogo)} style={{fontSize:13}} />
+            {companyLogo && <img src={companyLogo} style={{marginTop:8,maxHeight:40}} alt="Logo preview" />}
+          </div>
+          <div style={{gridColumn:'1/-1'}}>
+            <label style={labelStyle}>Company Banner Image</label>
+            <input type="file" accept="image/*" onChange={handleFileUpload(setCompanyImage)} style={{fontSize:13}} />
+            {companyImage && <img src={companyImage} style={{marginTop:8,maxHeight:100,borderRadius:8,objectFit:'cover',width:'100%'}} alt="Banner preview" />}
+          </div>
+          <div style={{gridColumn:'1/-1'}}>
+            <label style={labelStyle}>Company Description</label>
+            <textarea value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} rows={3} placeholder="Brief description of your company..." style={{...inputStyle,resize:'vertical'}} />
+          </div>
+          <div style={{gridColumn:'1/-1'}}>
+            <label style={labelStyle}>Highlights / Points of Differentiation</label>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <input value={highlight1} onChange={e=>setHighlight1(e.target.value)} placeholder="Highlight 1" style={inputStyle} />
+              <input value={highlight2} onChange={e=>setHighlight2(e.target.value)} placeholder="Highlight 2" style={inputStyle} />
+              <input value={highlight3} onChange={e=>setHighlight3(e.target.value)} placeholder="Highlight 3" style={inputStyle} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sales Agent */}
+      <div style={sectionStyle}>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Sales Agent</h3>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+          <div>
+            <label style={labelStyle}>Agent Name</label>
+            <input value={agentName} onChange={e=>setAgentName(e.target.value)} placeholder="e.g. Jane Doe" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Agent Photo</label>
+            <input type="file" accept="image/*" onChange={handleFileUpload(setAgentImage)} style={{fontSize:13}} />
+            {agentImage && <img src={agentImage} style={{marginTop:8,height:50,width:50,borderRadius:'50%',objectFit:'cover'}} alt="Agent preview" />}
+          </div>
+          <div>
+            <label style={labelStyle}>Email</label>
+            <input type="email" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)} placeholder="agent@company.com" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Phone</label>
+            <input type="tel" value={agentPhone} onChange={e=>setAgentPhone(e.target.value)} placeholder="(555) 123-4567" style={inputStyle} />
+          </div>
+        </div>
+      </div>
+
+      {/* Comp Selection */}
+      <div style={sectionStyle}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+          <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer'}}>
+            <input type="checkbox" checked={includeComps} onChange={e=>setIncludeComps(e.target.checked)} style={{accentColor:'var(--accent)'}} />
+            <span style={{fontSize:15,fontWeight:700}}>Include Detailed Comp Page</span>
+          </label>
+          <span style={{fontSize:12,color:'var(--text-muted)'}}>(optional)</span>
+        </div>
+        {includeComps && (
+          <div>
+            <p style={{fontSize:12,color:'var(--text-muted)',marginBottom:10}}>Select up to 5 comps to feature in the report:</p>
+            {selectedComps.length === 0 && <p style={{fontSize:13,color:'var(--text-muted)'}}>No comps selected. Go to the Comps tab and select properties first.</p>}
+            <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:300,overflowY:'auto'}}>
+              {selectedComps.map(c => {
+                const id = c.listing_id || c.comp_id || c.id;
+                const isChecked = reportComps.has(id);
+                return (
+                  <label key={id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background: isChecked?'var(--accent-bg)':'var(--surface2)',border:'1px solid '+(isChecked?'var(--accent-light)':'var(--border)'),borderRadius:8,cursor:'pointer',fontSize:13}}>
+                    <input type="checkbox" checked={isChecked} onChange={()=>toggleComp(id)} disabled={!isChecked && reportComps.size >= 5} style={{accentColor:'var(--accent)'}} />
+                    <span style={{fontWeight:500,flex:1}}>{c.title || 'Comp'}</span>
+                    <span style={{color:'var(--text-muted)',fontSize:12}}>{c.bedrooms}BR · ${Math.round(c.nrevenue_365_0||0).toLocaleString()}/yr</span>
+                  </label>
+                );
+              })}
+            </div>
+            {reportComps.size > 0 && <p style={{fontSize:11,color:'var(--text-muted)',marginTop:6}}>{reportComps.size}/5 selected</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Generate Button */}
+      <button onClick={handleGenerate} disabled={generating || !hasProjection} style={{
+        width:'100%', background: hasProjection?'var(--accent)':'var(--border)', color: hasProjection?'#fff':'var(--text-muted)',
+        border:'none', borderRadius:10, padding:'14px 20px', fontSize:15, fontWeight:700, cursor: hasProjection?'pointer':'not-allowed',
+        marginBottom:40
+      }}>
+        {generating ? 'Generating Report...' : 'Generate Report'}
+      </button>
+    </div>
+  );
+}
+
+/* ═══════════════ REPORT PDF GENERATION ═══════════════ */
+function buildRangeChartSVG(title, monthlyData, formatter, color) {
+  // monthlyData = { conservative: [12 values], base: [12 values], aggressive: [12 values] }
+  const W = 500, H = 180, PAD_L = 50, PAD_R = 15, PAD_T = 25, PAD_B = 30;
+  const chartW = W - PAD_L - PAD_R, chartH = H - PAD_T - PAD_B;
+
+  const allVals = [...monthlyData.conservative, ...monthlyData.base, ...monthlyData.aggressive];
+  const minV = Math.min(...allVals) * 0.9;
+  const maxV = Math.max(...allVals) * 1.05;
+  const range = maxV - minV || 1;
+
+  const x = (i) => PAD_L + (i / 11) * chartW;
+  const y = (v) => PAD_T + chartH - ((v - minV) / range) * chartH;
+
+  const shadedPath = MONTHS.map((_, i) => `${x(i)},${y(monthlyData.aggressive[i])}`).join(' ') + ' ' +
+    [...MONTHS].reverse().map((_, ri) => { const i = 11 - ri; return `${x(i)},${y(monthlyData.conservative[i])}`; }).join(' ');
+
+  const baseLine = MONTHS.map((_, i) => `${x(i)},${y(monthlyData.base[i])}`).join(' ');
+
+  // Y-axis ticks
+  const ticks = 5;
+  const yTicks = Array.from({length: ticks}, (_, i) => minV + (range * i / (ticks - 1)));
+
+  return `
+    <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif;">
+      <text x="${W/2}" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#1d1d1f">${title}</text>
+      <!-- Grid lines -->
+      ${yTicks.map(v => `<line x1="${PAD_L}" y1="${y(v)}" x2="${W-PAD_R}" y2="${y(v)}" stroke="#e5e5ea" stroke-width="0.5"/>`).join('')}
+      <!-- Shaded range -->
+      <polygon points="${shadedPath}" fill="${color}" opacity="0.15" />
+      <!-- Base line -->
+      <polyline points="${baseLine}" fill="none" stroke="${color}" stroke-width="2.5" />
+      <!-- Dots on base -->
+      ${MONTHS.map((_, i) => `<circle cx="${x(i)}" cy="${y(monthlyData.base[i])}" r="2.5" fill="${color}" />`).join('')}
+      <!-- X-axis labels -->
+      ${MONTHS.map((m, i) => `<text x="${x(i)}" y="${H - 5}" text-anchor="middle" font-size="7" fill="#6e6e73">${m}</text>`).join('')}
+      <!-- Y-axis labels -->
+      ${yTicks.map(v => `<text x="${PAD_L - 5}" y="${y(v) + 3}" text-anchor="end" font-size="7" fill="#6e6e73">${formatter(v)}</text>`).join('')}
+      <!-- Legend -->
+      <rect x="${PAD_L}" y="${H - 14}" width="8" height="8" fill="${color}" opacity="0.2" rx="1"/>
+      <text x="${PAD_L + 12}" y="${H - 7}" font-size="7" fill="#6e6e73">Conservative – Aggressive Range</text>
+      <line x1="${PAD_L + 170}" y1="${H - 10}" x2="${PAD_L + 185}" y2="${H - 10}" stroke="${color}" stroke-width="2"/>
+      <text x="${PAD_L + 189}" y="${H - 7}" font-size="7" fill="#6e6e73">Base Case</text>
+    </svg>`;
+}
+
+async function generateReport(projection, assumptions, comps, selectedComps, pmCompany, propertyAddress, seasonality, extras) {
+  const {
+    ownerName, heroImageData, companyName, companyLogoData, companyImageData,
+    companyDesc, highlights, agentName, agentImageData, agentEmail, agentPhone,
+    includeComps, selectedCompIds
+  } = extras || {};
+
+  const pm = pmCompany || {};
+  const accentHex = '#7C3AED'; // Wheelhouse purple
+
+  const { SEASON_REV, SEASON_OCC, SEASON_ADR, SEASON_LOS } = (projection && projection.seasonFactors) || {
+    SEASON_REV: FALLBACK_SEASON_REV, SEASON_OCC: FALLBACK_SEASON_OCC,
+    SEASON_ADR: FALLBACK_SEASON_ADR, SEASON_LOS: FALLBACK_SEASON_LOS
+  };
+
+  const _pn = parseFloat(pm.perNightFee) || 0;
+  const _ps = parseFloat(pm.perStayFee) || 0;
+  const _pp = parseFloat(pm.pctFee) || 0;
+
+  const computeMonthly = (annualGross, scenarioMult) => {
+    if (!projection) return { rental: annualGross, fees: 0, monthly: [] };
+    const mult = scenarioMult || 1.0;
+    const medOcc = projection.medOcc || 0, medLOS = projection.medLOS || 1;
+    let totalFees = 0;
+    const monthlyData = [];
+    MONTHS.forEach((m, i) => {
+      const grossRev = annualGross * mult * SEASON_REV[i] / 12;
+      const occ = Math.min(medOcc * SEASON_OCC[i], 1.0);
+      const occN = Math.round(DAYS_IN_MONTH[i] * occ);
+      const los = medLOS * SEASON_LOS[i];
+      const stays = los > 0 ? occN / los : 0;
+      const nightFees = occN * _pn;
+      const stayFees = stays * _ps;
+      const revFees = grossRev * (_pp / 100);
+      const mFees = nightFees + stayFees + revFees;
+      totalFees += mFees;
+      monthlyData.push({ month: MONTHS[i], grossRev, occN, occ, los, stays, totalFees: mFees, rental: grossRev - mFees });
+    });
+    return { rental: annualGross * mult - totalFees, fees: totalFees, monthly: monthlyData };
+  };
+
+  const scenarios = {};
+  ['conservative','base','aggressive'].forEach(key => {
+    const mult = key === 'conservative' ? 0.85 : key === 'aggressive' ? 1.15 : 1.0;
+    scenarios[key] = computeMonthly(projection?.medRevenue || 0, mult);
+  });
+
+  const monthlyRentals = {};
+  const monthlyOcc = {};
+  const monthlyADR = {};
+  ['conservative','base','aggressive'].forEach(key => {
+    monthlyRentals[key] = scenarios[key].monthly.map(m => Math.round(m.rental));
+    monthlyOcc[key] = scenarios[key].monthly.map(m => m.occ * 100);
+    monthlyADR[key] = scenarios[key].monthly.map((m, i) => m.occN > 0 ? monthlyRentals[key][i] / m.occN : 0);
+  });
+
+  const conservativeAnnual = Math.round(scenarios.conservative.rental);
+  const baseAnnual = Math.round(scenarios.base.rental);
+  const aggressiveAnnual = Math.round(scenarios.aggressive.rental);
+
+  const revChart = buildRangeChartSVG('Monthly Revenue', monthlyRentals, v => '$' + Math.round(v).toLocaleString(), accentHex);
+  const occChart = buildRangeChartSVG('Monthly Occupancy (%)', monthlyOcc, v => Math.round(v) + '%', '#16a34a');
+
+  // Selected comps for page 4
+  let reportCompList = [];
+  if (includeComps && selectedCompIds?.length > 0) {
+    const idSet = new Set(selectedCompIds.map(String));
+    reportCompList = comps.filter(c => idSet.has(String(c.listing_id || c.comp_id || c.id))).slice(0, 5);
+  }
+
+  const dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const propAddr = propertyAddress || 'Property';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1d1d1f; background: #fff; width: 8.5in; margin: 0 auto; }
+    .page { width: 8.5in; min-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; }
+    .page:last-child { page-break-after: avoid; }
+
+    /* COVER */
+    .cover-hero { width: 100%; height: 280px; object-fit: cover; }
+    .cover-body { padding: 30px 18mm 20px; }
+    .cover-address { font-size: 28px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; line-height: 1.2; }
+    .cover-prepared { font-size: 11px; color: #6e6e73; margin-top: 16px; }
+    .cover-owner { font-size: 20px; font-weight: 700; margin: 4px 0 20px; }
+    .cover-revenue-label { font-size: 10px; color: #6e6e73; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .cover-revenue-range { display: flex; gap: 8px; margin-bottom: 24px; }
+    .cover-rev-box { flex: 1; border-radius: 8px; padding: 14px; text-align: center; }
+    .cover-rev-box.conservative { background: #FFF7ED; border: 1px solid #FB923C; }
+    .cover-rev-box.base { background: #F3F0FF; border: 1px solid ${accentHex}; }
+    .cover-rev-box.aggressive { background: #F0FDF4; border: 1px solid #22C55E; }
+    .cover-rev-label { font-size: 8px; color: #6e6e73; font-weight: 600; margin-bottom: 4px; }
+    .cover-rev-value { font-size: 18px; font-weight: 700; }
+    .cover-rev-box.conservative .cover-rev-value { color: #EA580C; }
+    .cover-rev-box.base .cover-rev-value { color: ${accentHex}; }
+    .cover-rev-box.aggressive .cover-rev-value { color: #16A34A; }
+    .cover-company { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-top: 16px; border-top: 1px solid #e5e5ea; }
+    .cover-company img { height: 30px; width: auto; }
+    .cover-company-name { font-size: 14px; font-weight: 700; }
+    .cover-agent { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+    .cover-agent img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .cover-agent-name { font-size: 12px; font-weight: 700; }
+    .cover-agent-contact { font-size: 9px; color: #6e6e73; }
+    .cover-footer { position: absolute; bottom: 20px; left: 18mm; right: 18mm; text-align: center; font-size: 8px; color: #6e6e73; border-top: 1px solid #e5e5ea; padding-top: 10px; }
+
+    /* PAGE 2: COMPANY OVERVIEW */
+    .page-header { background: ${accentHex}; color: white; padding: 12px 18mm; font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .page-body { padding: 0 18mm 18mm; }
+    .company-banner { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; }
+    .company-desc { font-size: 11px; color: #3a3a3a; line-height: 1.6; margin-bottom: 20px; }
+    .highlights { display: flex; gap: 10px; margin-bottom: 24px; }
+    .highlight-card { flex: 1; background: #F9FAFB; border: 1px solid #e5e5ea; border-radius: 8px; padding: 14px; border-top: 3px solid ${accentHex}; }
+    .highlight-num { font-size: 10px; font-weight: 700; color: ${accentHex}; margin-bottom: 4px; }
+    .highlight-text { font-size: 10px; color: #1d1d1f; line-height: 1.4; }
+    .agent-block { display: flex; align-items: center; gap: 14px; background: #F9FAFB; border: 1px solid #e5e5ea; border-radius: 8px; padding: 16px; }
+    .agent-block img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+    .agent-block-name { font-size: 13px; font-weight: 700; }
+    .agent-block-info { font-size: 10px; color: #6e6e73; margin-top: 2px; }
+
+    /* PAGE 3: PROJECTIONS */
+    .section-title { font-size: 12px; font-weight: 700; color: ${accentHex}; margin: 16px 0 8px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 7.5px; margin-bottom: 12px; }
+    .data-table thead { background: #f5f5f7; }
+    .data-table th { padding: 5px 4px; text-align: center; font-weight: 700; color: ${accentHex}; border: 1px solid #e5e5ea; font-size: 7px; }
+    .data-table td { padding: 4px; text-align: center; border: 1px solid #e5e5ea; }
+    .data-table .scenario-label { text-align: left; font-weight: 600; color: #1d1d1f; }
+    .data-table .conservative { color: #EA580C; font-weight: 600; }
+    .data-table .base { color: ${accentHex}; font-weight: 600; }
+    .data-table .aggressive { color: #16A34A; font-weight: 600; }
+    .charts-row { display: flex; gap: 10px; margin-top: 10px; }
+    .charts-row > div { flex: 1; }
+
+    /* PAGE 4: COMPS */
+    .comp-card { border: 1px solid #e5e5ea; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+    .comp-card-name { font-size: 12px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; }
+    .comp-card-revenue { display: flex; gap: 6px; flex-wrap: wrap; }
+    .comp-month { background: #f5f5f7; border-radius: 4px; padding: 3px 6px; font-size: 7.5px; text-align: center; }
+    .comp-month-label { color: #6e6e73; font-weight: 600; }
+    .comp-month-value { color: #1d1d1f; font-weight: 600; }
+
+    .disclaimer { font-size: 7px; color: #999; line-height: 1.4; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e5ea; }
+  </style>
+</head>
+<body>
+
+<!-- PAGE 1: COVER -->
+<div class="page">
+  ${heroImageData ? `<img src="${heroImageData}" class="cover-hero" alt="Property" onerror="this.style.display='none'">` : '<div style="height:50px"></div>'}
+  <div class="cover-body">
+    <div class="cover-address">${propAddr}</div>
+    <div class="cover-prepared">Prepared for</div>
+    <div class="cover-owner">${ownerName || 'Owner'}</div>
+    <div class="cover-revenue-label">ANNUAL REVENUE PROJECTION</div>
+    <div class="cover-revenue-range">
+      <div class="cover-rev-box conservative">
+        <div class="cover-rev-label">Conservative</div>
+        <div class="cover-rev-value">${fmtUSD(conservativeAnnual)}</div>
+      </div>
+      <div class="cover-rev-box base">
+        <div class="cover-rev-label">Base Case</div>
+        <div class="cover-rev-value">${fmtUSD(baseAnnual)}</div>
+      </div>
+      <div class="cover-rev-box aggressive">
+        <div class="cover-rev-label">Aggressive</div>
+        <div class="cover-rev-value">${fmtUSD(aggressiveAnnual)}</div>
+      </div>
+    </div>
+    <div class="cover-company">
+      ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo" onerror="this.style.display='none'">` : ''}
+      <div class="cover-company-name">${companyName || ''}</div>
+    </div>
+    ${agentName ? `
+    <div class="cover-agent">
+      ${agentImageData ? `<img src="${agentImageData}" alt="Agent" onerror="this.style.display='none'">` : ''}
+      <div>
+        <div class="cover-agent-name">${agentName}</div>
+        <div class="cover-agent-contact">${[agentEmail, agentPhone].filter(Boolean).join(' · ')}</div>
+      </div>
+    </div>
+    ` : ''}
+  </div>
+  <div class="cover-footer">${dateStr} · Powered by Wheelhouse</div>
+</div>
+
+<!-- PAGE 2: COMPANY OVERVIEW -->
+<div class="page">
+  <div class="page-header">${companyName || 'Property Management'} Overview</div>
+  <div class="page-body">
+    ${companyImageData ? `<img src="${companyImageData}" class="company-banner" alt="Company" onerror="this.style.display='none'">` : ''}
+    ${companyDesc ? `<div class="company-desc">${companyDesc}</div>` : ''}
+    ${highlights && highlights.length > 0 ? `
+    <div class="highlights">
+      ${highlights.map((h, i) => `
+        <div class="highlight-card">
+          <div class="highlight-num">${i + 1}</div>
+          <div class="highlight-text">${h}</div>
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+    ${agentName ? `
+    <div style="font-size:11px;font-weight:700;color:#1d1d1f;margin-bottom:10px;">Your Dedicated Agent</div>
+    <div class="agent-block">
+      ${agentImageData ? `<img src="${agentImageData}" alt="Agent" onerror="this.style.display='none'">` : ''}
+      <div>
+        <div class="agent-block-name">${agentName}</div>
+        ${agentEmail ? `<div class="agent-block-info">${agentEmail}</div>` : ''}
+        ${agentPhone ? `<div class="agent-block-info">${agentPhone}</div>` : ''}
+      </div>
+    </div>
+    ` : ''}
+  </div>
+</div>
+
+<!-- PAGE 3: SUMMARY PROJECTIONS -->
+<div class="page">
+  <div class="page-header">Revenue Projections</div>
+  <div class="page-body">
+    <div class="section-title">Monthly Rental Revenue</div>
+    <table class="data-table">
+      <thead><tr><th>Scenario</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Annual</th></tr></thead>
+      <tbody>
+        ${['conservative','base','aggressive'].map(key => {
+          const vals = monthlyRentals[key];
+          const annual = vals.reduce((a,b)=>a+b,0);
+          return `<tr><td class="scenario-label">${key.charAt(0).toUpperCase()+key.slice(1)}</td>${vals.map(v=>`<td class="${key}">${fmtUSD(v)}</td>`).join('')}<td class="${key}">${fmtUSD(annual)}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="section-title">Monthly Occupancy (%)</div>
+    <table class="data-table">
+      <thead><tr><th>Scenario</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Avg</th></tr></thead>
+      <tbody>
+        ${['conservative','base','aggressive'].map(key => {
+          const vals = monthlyOcc[key];
+          const avg = vals.reduce((a,b)=>a+b,0)/12;
+          return `<tr><td class="scenario-label">${key.charAt(0).toUpperCase()+key.slice(1)}</td>${vals.map(v=>`<td class="${key}">${v.toFixed(1)}%</td>`).join('')}<td class="${key}">${avg.toFixed(1)}%</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="section-title">Monthly ADR</div>
+    <table class="data-table">
+      <thead><tr><th>Scenario</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Avg</th></tr></thead>
+      <tbody>
+        ${['conservative','base','aggressive'].map(key => {
+          const vals = monthlyADR[key];
+          const avg = vals.reduce((a,b)=>a+b,0)/12;
+          return `<tr><td class="scenario-label">${key.charAt(0).toUpperCase()+key.slice(1)}</td>${vals.map(v=>`<td class="${key}">${fmtUSD(Math.round(v))}</td>`).join('')}<td class="${key}">${fmtUSD(Math.round(avg))}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="charts-row">
+      <div>${revChart}</div>
+      <div>${occChart}</div>
+    </div>
+    <div class="disclaimer">
+      This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only and do not include additional fees, housekeeping, administrative costs, taxes, etc. Revenue is not guaranteed. Market conditions and individual property performance may vary.
+    </div>
+  </div>
+</div>
+
+${includeComps && reportCompList.length > 0 ? `
+<!-- PAGE 4: COMP DETAILS -->
+<div class="page">
+  <div class="page-header">Comparable Properties</div>
+  <div class="page-body">
+    ${reportCompList.map(c => {
+      const compRevenue = c.nrevenue_365_0 || 0;
+      const compOcc = c.occupancy_365_0 || 0;
+      const compADR = c.anr_365_0 || 0;
+      // Estimate monthly revenue using seasonal factors
+      const monthlyRevEst = MONTHS.map((_, i) => Math.round(compRevenue * SEASON_REV[i] / 12));
+      return `
+      <div class="comp-card">
+        <div class="comp-card-name">${(c.title || 'Comp').substring(0, 50)} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
+        <div style="font-size:9px;color:#6e6e73;margin-bottom:8px;">Annual Revenue: ${fmtUSD(Math.round(compRevenue))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
+        <div class="comp-card-revenue">
+          ${monthlyRevEst.map((v, i) => `<div class="comp-month"><div class="comp-month-label">${MONTHS[i]}</div><div class="comp-month-value">${fmtUSD(v)}</div></div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>
+` : ''}
+
+</body>
+</html>
+  `;
+
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.width = '8.5in';
+  tempDiv.innerHTML = htmlContent;
+  document.body.appendChild(tempDiv);
+
+  const safeAddr = (propertyAddress || 'report').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+  const opt = {
+    margin: 0,
+    filename: `${safeAddr}_revenue_report.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'], avoid: '.no-break' }
+  };
+
+  await html2pdf().set(opt).from(tempDiv).save();
+  document.body.removeChild(tempDiv);
+}
+
+
 function App({ authUser, onLogout, setAuthUser }) {
   const [integrationKey, setIntegrationKey] = useState('BKXc_wza6e5A3iAcyJF1MNLk2BVrVw');
   const [userKey, setUserKey] = useState('zgo_cxsKPvbXWwxqxcijPqesySzsNw');
@@ -1647,6 +2212,7 @@ function App({ authUser, onLogout, setAuthUser }) {
           <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
           <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
+          <TabBtn label="Report" active={view==='report'} onClick={()=>setView('report')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
           <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
         </div>
@@ -2196,6 +2762,9 @@ function App({ authUser, onLogout, setAuthUser }) {
           )}
         </div>
       )}
+
+      {/* ─── Report ─── */}
+      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} />}
 
       {/* ─── Profile ─── */}
       {view==='profile' && <ProfilePanel authUser={authUser} onLogout={onLogout} setAuthUser={setAuthUser} />}
