@@ -1390,6 +1390,8 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const [includeComps, setIncludeComps] = useState(false);
   const [reportComps, setReportComps] = useState(new Set());
   const [generating, setGenerating] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [previewAddr, setPreviewAddr] = useState('');
 
   // PM Company Templates
   const [pmTemplates, setPmTemplates] = useState(() => {
@@ -1480,8 +1482,19 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         includeComps,
         selectedCompIds: [...reportComps],
       };
-      await generateReport(projection, assumptions, comps, selectedComps, pmCompany, address, seasonality, reportExtras);
+      const result = await generateReport(projection, assumptions, comps, selectedComps, pmCompany, address, seasonality, reportExtras);
+      setPreviewHtml(result.htmlContent);
+      setPreviewAddr(result.propertyAddress);
     } catch(e) { console.error('Report generation failed:', e); }
+    setGenerating(false);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!previewHtml) return;
+    setGenerating(true);
+    try {
+      await downloadReportPDF(previewHtml, previewAddr);
+    } catch(e) { console.error('PDF download failed:', e); }
     setGenerating(false);
   };
 
@@ -1657,8 +1670,31 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         border:'none', borderRadius:10, padding:'14px 20px', fontSize:15, fontWeight:700, cursor: hasProjection?'pointer':'not-allowed',
         marginBottom:40
       }}>
-        {generating ? 'Generating Report...' : 'Generate Report'}
+        {generating ? 'Generating...' : 'Preview Report'}
       </button>
+
+      {/* Preview Modal */}
+      {previewHtml && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:9999,display:'flex',flexDirection:'column',alignItems:'center'}}>
+          <div style={{background:'var(--surface)',padding:'10px 20px',display:'flex',alignItems:'center',gap:12,width:'100%',borderBottom:'1px solid var(--border)',justifyContent:'center'}}>
+            <button onClick={handleDownloadPDF} disabled={generating} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+              {generating ? 'Generating PDF...' : 'Download PDF'}
+            </button>
+            <button onClick={()=>setPreviewHtml(null)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>
+              Close Preview
+            </button>
+          </div>
+          <div style={{flex:1,overflow:'auto',padding:'20px 0',display:'flex',justifyContent:'center',width:'100%'}}>
+            <div style={{width:'8.5in',background:'#fff',boxShadow:'0 4px 20px rgba(0,0,0,0.3)'}}>
+              <iframe
+                srcDoc={previewHtml}
+                style={{width:'8.5in',height:'100%',minHeight:'90vh',border:'none'}}
+                title="Report Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2003,6 +2039,10 @@ ${includeComps && reportCompList.length > 0 ? `
 </html>
   `;
 
+  return { htmlContent, propertyAddress };
+}
+
+async function downloadReportPDF(htmlContent, propertyAddress) {
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'fixed';
   tempDiv.style.left = '-9999px';
