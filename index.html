@@ -2004,35 +2004,36 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
 
     /* ── COVER ── */
     .cover { display: flex; flex-direction: column; min-height: 11in; background: #fff; }
-    .cover-header { padding: 28px 36px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .cover-logo-area { display: flex; align-items: center; gap: 10px; }
-    .cover-logo-area img { height: 60px; width: auto; }
+    .cover-header { padding: 30px 40px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .cover-logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .cover-logo-area img { height: 70px; width: auto; }
     .cover-logo-area .co-name { font-size: 18px; font-weight: 800; color: var(--text); }
-    .cover-title-area { text-align: center; flex: 1; }
-    .cover-title-addr { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: 0.06em; text-transform: uppercase; }
-    .cover-title-sub { font-size: 11px; font-weight: 500; color: var(--text-sec); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
-    .cover-hero { margin: 0 36px; height: 400px; overflow: hidden; border-radius: 4px; }
+    .cover-title-area { text-align: right; }
+    .cover-title-addr { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: 0.05em; text-transform: uppercase; }
+    .cover-title-sub { font-size: 10px; font-weight: 500; color: var(--text-sec); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px; }
+    .cover-hero { margin: 0 40px; height: 420px; overflow: hidden; border-radius: 3px; }
     .cover-hero img { width: 100%; height: 100%; object-fit: cover; }
-    .cover-stats-bar { margin: 0; background: var(--tan); padding: 24px 36px; display: flex; align-items: center; }
-    .cover-stats-left { display: flex; gap: 20px; align-items: center; }
-    .cover-stat-item { display: flex; align-items: center; gap: 8px; }
-    .cover-stat-icon { font-size: 20px; color: var(--text-sec); }
-    .cover-stat-text { font-size: 15px; font-weight: 600; color: var(--text); }
-    .cover-stats-divider { width: 1px; height: 40px; background: #c5b88a; margin: 0 16px; }
+    .cover-stats-bar { margin: 20px 0 0; background: var(--tan); padding: 28px 40px; display: flex; align-items: center; }
+    .cover-stats-left { display: flex; flex-direction: column; gap: 10px; }
+    .cover-stat-item { display: flex; align-items: center; gap: 10px; }
+    .cover-stat-icon { font-size: 22px; color: var(--text-sec); }
+    .cover-stat-text { font-size: 16px; font-weight: 600; color: var(--text); }
+    .cover-stats-divider { width: 1px; height: 60px; background: #c5b88a; margin: 0 30px; }
     .cover-revenue-area { flex: 1; text-align: right; }
-    .cover-revenue-label { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-    .cover-revenue-range { font-size: 32px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
-    .cover-agent-section { padding: 24px 36px; display: flex; align-items: center; gap: 20px; flex: 1; }
+    .cover-revenue-label { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .cover-revenue-range { font-size: 36px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+    .cover-agent-section { padding: 28px 40px; display: flex; align-items: center; gap: 16px; flex: 1; }
     .cover-agent-cta { flex: 1; }
-    .cover-agent-cta .cta-head { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .cover-agent-cta .cta-text { font-size: 11px; color: var(--text-sec); line-height: 1.6; }
-    .cover-agent-right { display: flex; align-items: center; gap: 14px; }
+    .cover-agent-cta .cta-head { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .cover-agent-cta .cta-text { font-size: 12px; color: var(--text-sec); line-height: 1.65; }
+    .cover-agent-divider { width: 1px; height: 70px; background: #ddd; margin: 0 10px; }
+    .cover-agent-right { display: flex; align-items: center; gap: 16px; }
     .cover-agent-info { text-align: left; }
-    .cover-agent-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .cover-agent-contact { font-size: 11px; color: var(--text-sec); display: flex; align-items: center; gap: 6px; margin-top: 3px; }
-    .cover-agent-contact .icon { color: var(--gold); font-size: 12px; }
-    .cover-agent-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
-    .cover-disclaimer-bar { background: var(--tan); padding: 12px 36px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; margin-top: auto; }
+    .cover-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .cover-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
+    .cover-agent-contact .icon { color: var(--gold); font-size: 13px; }
+    .cover-agent-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
+    .cover-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; margin-top: auto; }
 
     /* ── PAGE HEADER ── */
     .pg-header { padding: 20px 30px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--dk); margin: 0 0 20px; }
@@ -2042,37 +2043,38 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
 
     /* ── PAGE 2: COMPANY ── */
     .p2 { background: #fff; display: flex; flex-direction: column; min-height: 11in; }
-    .p2-header { padding: 28px 36px 20px; display: flex; justify-content: space-between; align-items: center; }
-    .p2-logo-area { display: flex; align-items: center; gap: 10px; }
-    .p2-logo-area img { height: 60px; width: auto; }
+    .p2-header { padding: 30px 40px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .p2-logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .p2-logo-area img { height: 70px; width: auto; }
     .p2-logo-area .co-name { font-size: 18px; font-weight: 800; color: var(--text); }
-    .p2-title-area { text-align: center; flex: 1; }
-    .p2-title-addr { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: 0.06em; text-transform: uppercase; }
-    .p2-title-sub { font-size: 11px; font-weight: 500; color: var(--text-sec); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
-    .p2-banner { margin: 0 36px; height: 340px; overflow: hidden; border-radius: 4px; }
+    .p2-title-area { text-align: right; }
+    .p2-title-addr { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: 0.05em; text-transform: uppercase; }
+    .p2-title-sub { font-size: 10px; font-weight: 500; color: var(--text-sec); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px; }
+    .p2-banner { margin: 0 40px; height: 380px; overflow: hidden; border-radius: 3px; }
     .p2-banner img { width: 100%; height: 100%; object-fit: cover; }
-    .p2-content { background: var(--tan); margin: 0; padding: 28px 36px; display: flex; gap: 30px; }
-    .p2-about { flex: 1; }
-    .p2-about-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; text-align: center; }
-    .p2-about-divider { width: 60px; height: 2px; background: var(--gold); margin: 0 auto 14px; }
-    .p2-about-text { font-size: 11px; color: #4a4a4e; line-height: 1.7; text-align: center; }
-    .p2-about-divider-v { width: 1px; background: #c5b88a; align-self: stretch; }
-    .p2-diff { flex: 1; }
-    .p2-diff-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
-    .p2-diff-item { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-    .p2-diff-check { width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-    .p2-diff-text { font-size: 13px; color: var(--text); font-weight: 500; }
-    .p2-agent-section { padding: 24px 36px; display: flex; align-items: center; gap: 20px; flex: 1; }
+    .p2-content { background: var(--tan); margin: 20px 0 0; padding: 32px 40px; display: flex; gap: 0; align-items: stretch; }
+    .p2-about { flex: 1; padding-right: 30px; display: flex; flex-direction: column; justify-content: center; }
+    .p2-about-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 10px; text-align: center; }
+    .p2-about-divider { width: 60px; height: 2px; background: var(--gold); margin: 0 auto 16px; }
+    .p2-about-text { font-size: 12px; color: #4a4a4e; line-height: 1.75; text-align: center; }
+    .p2-about-divider-v { width: 1px; background: #c5b88a; flex-shrink: 0; }
+    .p2-diff { flex: 1; padding-left: 30px; display: flex; flex-direction: column; justify-content: center; }
+    .p2-diff-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+    .p2-diff-item { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .p2-diff-check { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+    .p2-diff-text { font-size: 14px; color: var(--text); font-weight: 500; }
+    .p2-agent-section { padding: 28px 40px; display: flex; align-items: center; gap: 16px; flex: 1; }
     .p2-agent-cta { flex: 1; }
-    .p2-agent-cta .cta-head { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .p2-agent-cta .cta-text { font-size: 11px; color: var(--text-sec); line-height: 1.6; }
-    .p2-agent-right { display: flex; align-items: center; gap: 14px; }
+    .p2-agent-cta .cta-head { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .p2-agent-cta .cta-text { font-size: 12px; color: var(--text-sec); line-height: 1.65; }
+    .p2-agent-divider { width: 1px; height: 70px; background: #ddd; margin: 0 10px; }
+    .p2-agent-right { display: flex; align-items: center; gap: 16px; }
     .p2-agent-info { text-align: left; }
-    .p2-agent-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .p2-agent-contact { font-size: 11px; color: var(--text-sec); display: flex; align-items: center; gap: 6px; margin-top: 3px; }
-    .p2-agent-contact .icon { color: var(--gold); font-size: 12px; }
-    .p2-agent-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
-    .p2-disclaimer-bar { background: var(--tan); padding: 12px 36px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; margin-top: auto; }
+    .p2-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .p2-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
+    .p2-agent-contact .icon { color: var(--gold); font-size: 13px; }
+    .p2-agent-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
+    .p2-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; margin-top: auto; }
 
     /* ── PAGE 3: PROJECTIONS ── */
     .section-title { font-size: 11px; font-weight: 800; color: var(--dk); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -2135,6 +2137,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       <div class="cta-head">Contact us to get started today</div>
       <div class="cta-text">Our local team of experts is ready and excited to help you make the most of your vacation rental investment.</div>
     </div>
+    <div class="cover-agent-divider"></div>
     <div class="cover-agent-right">
       <div class="cover-agent-info">
         ${agentName ? `<div class="cover-agent-name">${agentName}</div>` : ''}
@@ -2179,6 +2182,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       <div class="cta-head">Contact us to get started today</div>
       <div class="cta-text">Our local team of experts is ready and excited to help you make the most of your vacation rental investment.</div>
     </div>
+    <div class="p2-agent-divider"></div>
     <div class="p2-agent-right">
       <div class="p2-agent-info">
         ${agentName ? `<div class="p2-agent-name">${agentName}</div>` : ''}
