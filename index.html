@@ -2021,15 +2021,15 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .cover-hero { margin: 0 40px; height: 420px; overflow: hidden; border-radius: 3px; }
     .cover-hero img { width: 100%; height: 100%; object-fit: cover; }
     .cover-spacer { flex: 1; }
-    .cover-stats-bar { background: var(--tan); padding: 28px 40px; display: flex; align-items: center; }
-    .cover-stats-left { display: flex; flex-direction: column; gap: 10px; width: 200px; }
-    .cover-stat-item { display: flex; align-items: center; gap: 10px; }
-    .cover-stat-icon { font-size: 22px; color: var(--text-sec); }
-    .cover-stat-text { font-size: 16px; font-weight: 600; color: var(--text); }
-    .cover-stats-divider { width: 1px; height: 60px; background: #c5b88a; margin: 0 40px; }
+    .cover-stats-bar { background: var(--tan); padding: 36px 40px; display: flex; align-items: center; }
+    .cover-stats-left { display: flex; flex-direction: column; gap: 14px; width: 220px; }
+    .cover-stat-item { display: flex; align-items: center; gap: 12px; }
+    .cover-stat-icon { font-size: 26px; color: var(--text-sec); }
+    .cover-stat-text { font-size: 18px; font-weight: 600; color: var(--text); }
+    .cover-stats-divider { width: 1px; height: 70px; background: #c5b88a; margin: 0 40px; }
     .cover-revenue-area { flex: 1; text-align: right; }
-    .cover-revenue-label { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-    .cover-revenue-range { font-size: 36px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+    .cover-revenue-label { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .cover-revenue-range { font-size: 42px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
     .cover-spacer2 { flex: 1; }
     .cover-agent-section { padding: 20px 40px; display: flex; align-items: center; }
     .cover-agent-cta { flex: 0 1 340px; }
@@ -2041,14 +2041,19 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .cover-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
     .cover-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
     .cover-agent-contact .icon { color: var(--gold); font-size: 13px; }
-    .cover-agent-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
+    .cover-agent-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); image-rendering: -webkit-optimize-contrast; }
     .cover-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
-    /* ── PAGE HEADER ── */
-    .pg-header { padding: 20px 30px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--dk); margin: 0 0 20px; }
-    .pg-header-title { font-size: 18px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.02em; }
-    .pg-header-sub { font-size: 9px; color: #8b8b9e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-    .pg-body { padding: 0 30px 20px; }
+    /* ── PAGE HEADER (pages 3-4) ── */
+    .pg-header { padding: 30px 40px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .pg-header-logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .pg-header-logo img { height: 50px; width: auto; }
+    .pg-header-logo .co-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .pg-header-title-area { text-align: right; }
+    .pg-header-title { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: 0.04em; text-transform: uppercase; }
+    .pg-header-sub { font-size: 9px; color: var(--text-sec); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
+    .pg-body { padding: 0 40px 20px; }
+    .pg-disclaimer-bar { background: var(--tan); padding: 12px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; position: absolute; bottom: 0; left: 0; right: 0; }
 
     /* ── PAGE 2: COMPANY ── */
     .p2 { background: #fff; display: flex; flex-direction: column; min-height: 11in; }
@@ -2083,7 +2088,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .p2-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
     .p2-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
     .p2-agent-contact .icon { color: var(--gold); font-size: 13px; }
-    .p2-agent-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
+    .p2-agent-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); image-rendering: -webkit-optimize-contrast; }
     .p2-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
     /* ── PAGE 3: PROJECTIONS ── */
@@ -2111,7 +2116,6 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .comp-month-value { color: #1a1a2e; font-weight: 700; }
 
     .disclaimer { font-size: 7px; color: #b0b0c0; line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5e5ef; }
-    .pg-footer { position: absolute; bottom: 12px; left: 30px; right: 30px; text-align: center; font-size: 7px; color: #b0b0c0; }
   </style>
 </head>
 <body>
@@ -2210,8 +2214,13 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
 <!-- PAGE 3: SUMMARY PROJECTIONS -->
 <div class="page">
   <div class="pg-header">
-    <div class="pg-header-title">Revenue Projections</div>
-    <div class="pg-header-sub">${propAddr}</div>
+    <div class="pg-header-logo">
+      ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : `<span class="co-name">${companyName || ''}</span>`}
+    </div>
+    <div class="pg-header-title-area">
+      <div class="pg-header-title">${propAddr.split(',')[0] || propAddr}</div>
+      <div class="pg-header-sub">Annual Revenue Potential</div>
+    </div>
   </div>
   <div class="pg-body">
     <div class="section-title">Monthly Rental Revenue</div>
@@ -2251,19 +2260,21 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       <div>${revChart}</div>
       <div>${occChart}</div>
     </div>
-    <div class="disclaimer">
-      This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only and do not include additional fees, housekeeping, administrative costs, taxes, etc. Revenue is not guaranteed. Market conditions and individual property performance may vary.
-    </div>
   </div>
-  <div class="pg-footer">${companyName || ''} · ${dateStr}</div>
+  <div class="pg-disclaimer-bar">*This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only. Revenue is not guaranteed.</div>
 </div>
 
 ${includeComps && reportCompList.length > 0 ? `
 <!-- PAGE 4: COMP DETAILS -->
 <div class="page">
   <div class="pg-header">
-    <div class="pg-header-title">Comparable Properties</div>
-    <div class="pg-header-sub">${reportCompList.length} Selected Comps</div>
+    <div class="pg-header-logo">
+      ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : `<span class="co-name">${companyName || ''}</span>`}
+    </div>
+    <div class="pg-header-title-area">
+      <div class="pg-header-title">${propAddr.split(',')[0] || propAddr}</div>
+      <div class="pg-header-sub">Annual Revenue Potential</div>
+    </div>
   </div>
   <div class="pg-body">
     ${reportCompList.map(c => {
@@ -2281,7 +2292,7 @@ ${includeComps && reportCompList.length > 0 ? `
       </div>`;
     }).join('')}
   </div>
-  <div class="pg-footer">${companyName || ''} · ${dateStr}</div>
+  <div class="pg-disclaimer-bar">*This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only. Revenue is not guaranteed.</div>
 </div>
 ` : ''}
 
