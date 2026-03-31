@@ -1399,6 +1399,8 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   });
   const [pmTplName, setPmTplName] = useState('');
   const [showSavePm, setShowSavePm] = useState(false);
+  const [activePmTpl, setActivePmTpl] = useState('');
+  const [showPmSelect, setShowPmSelect] = useState(false);
 
   const savePmTemplate = () => {
     const name = pmTplName.trim();
@@ -1410,6 +1412,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   };
   const loadPmTemplate = (name) => {
     const t = pmTemplates[name]; if (!t) return;
+    setActivePmTpl(name); setShowPmSelect(false);
     setCompanyName(t.companyName || ''); setCompanyLogo(t.companyLogo || null);
     setCompanyImage(t.companyImage || null); setCompanyDesc(t.companyDesc || '');
     setHighlight1(t.highlight1 || ''); setHighlight2(t.highlight2 || ''); setHighlight3(t.highlight3 || '');
@@ -1425,6 +1428,8 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   });
   const [agentTplName, setAgentTplName] = useState('');
   const [showSaveAgent, setShowSaveAgent] = useState(false);
+  const [activeAgentTpl, setActiveAgentTpl] = useState('');
+  const [showAgentSelect, setShowAgentSelect] = useState(false);
 
   const saveAgentTemplate = () => {
     const name = agentTplName.trim();
@@ -1436,6 +1441,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   };
   const loadAgentTemplate = (name) => {
     const t = agentTemplates[name]; if (!t) return;
+    setActiveAgentTpl(name); setShowAgentSelect(false);
     setAgentName(t.agentName || ''); setAgentImage(t.agentImage || null);
     setAgentEmail(t.agentEmail || ''); setAgentPhone(t.agentPhone || '');
   };
@@ -1542,22 +1548,36 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
       <div style={sectionStyle}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}>
           <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Property Management Company</h3>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-            {Object.keys(pmTemplates).map(name => (
-              <div key={name} style={{display:'flex',alignItems:'center',gap:3}}>
-                <button onClick={()=>loadPmTemplate(name)} style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>{name}</button>
-                <button onClick={()=>deletePmTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,padding:'1px 3px',lineHeight:1}} title="Delete">&times;</button>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',position:'relative'}}>
+            {activePmTpl ? (
+              <React.Fragment>
+                <span style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600}}>{activePmTpl}</span>
+                <button onClick={()=>{setActivePmTpl('');setCompanyName('');setCompanyLogo(null);setCompanyImage(null);setCompanyDesc('');setHighlight1('');setHighlight2('');setHighlight3('');}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Clear template">&times;</button>
+              </React.Fragment>
+            ) : Object.keys(pmTemplates).length > 0 ? (
+              <div style={{position:'relative'}}>
+                <button onClick={()=>setShowPmSelect(!showPmSelect)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Select Template</button>
+                {showPmSelect && (
+                  <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:10,minWidth:160,padding:4}}>
+                    {Object.keys(pmTemplates).map(name => (
+                      <div key={name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'6px 8px',borderRadius:4}}>
+                        <button onClick={()=>loadPmTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
+                        <button onClick={(e)=>{e.stopPropagation();deletePmTemplate(name);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Delete">&times;</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-            {showSavePm ? (
+            ) : null}
+            {!activePmTpl && (showSavePm ? (
               <div style={{display:'flex',alignItems:'center',gap:4}}>
                 <input value={pmTplName} onChange={e=>setPmTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&savePmTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
                 <button onClick={savePmTemplate} disabled={!pmTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
                 <button onClick={()=>setShowSavePm(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
               </div>
-            ) : (
+            ) : companyName ? (
               <button onClick={()=>setShowSavePm(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save as Template</button>
-            )}
+            ) : null)}
           </div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
@@ -1594,22 +1614,36 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
       <div style={sectionStyle}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}>
           <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Sales Agent</h3>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-            {Object.keys(agentTemplates).map(name => (
-              <div key={name} style={{display:'flex',alignItems:'center',gap:3}}>
-                <button onClick={()=>loadAgentTemplate(name)} style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>{name}</button>
-                <button onClick={()=>deleteAgentTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,padding:'1px 3px',lineHeight:1}} title="Delete">&times;</button>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',position:'relative'}}>
+            {activeAgentTpl ? (
+              <React.Fragment>
+                <span style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600}}>{activeAgentTpl}</span>
+                <button onClick={()=>{setActiveAgentTpl('');setAgentName('');setAgentImage(null);setAgentEmail('');setAgentPhone('');}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Clear template">&times;</button>
+              </React.Fragment>
+            ) : Object.keys(agentTemplates).length > 0 ? (
+              <div style={{position:'relative'}}>
+                <button onClick={()=>setShowAgentSelect(!showAgentSelect)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Select Template</button>
+                {showAgentSelect && (
+                  <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:10,minWidth:160,padding:4}}>
+                    {Object.keys(agentTemplates).map(name => (
+                      <div key={name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'6px 8px',borderRadius:4}}>
+                        <button onClick={()=>loadAgentTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
+                        <button onClick={(e)=>{e.stopPropagation();deleteAgentTemplate(name);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Delete">&times;</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-            {showSaveAgent ? (
+            ) : null}
+            {!activeAgentTpl && (showSaveAgent ? (
               <div style={{display:'flex',alignItems:'center',gap:4}}>
                 <input value={agentTplName} onChange={e=>setAgentTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&saveAgentTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
                 <button onClick={saveAgentTemplate} disabled={!agentTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
                 <button onClick={()=>setShowSaveAgent(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
               </div>
-            ) : (
+            ) : agentName ? (
               <button onClick={()=>setShowSaveAgent(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save as Template</button>
-            )}
+            ) : null)}
           </div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
