@@ -2780,6 +2780,13 @@ function App({ authUser, onLogout, setAuthUser }) {
                 );
               })}
 
+            {/* Generate Report CTA */}
+            <div style={{marginTop:20,textAlign:'center'}}>
+              <button onClick={()=>setView('report')} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:10,padding:'14px 40px',fontSize:15,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:8}}>
+                Generate Report →
+              </button>
+              <div style={{fontSize:12,color:'var(--text-muted)',marginTop:6}}>Create a professional PDF with these projections</div>
+            </div>
             </>
             );
           })() : (
