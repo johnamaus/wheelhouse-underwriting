@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   :root {
@@ -2151,25 +2152,55 @@ ${includeComps && reportCompList.length > 0 ? `
 }
 
 async function downloadReportPDF(htmlContent, propertyAddress) {
+  // Strip @import (html2canvas can't load external fonts via @import)
+  const cleanHtml = htmlContent.replace(/@import url\([^)]+\);?\s*/g, '');
+
   const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'fixed';
-  tempDiv.style.left = '-9999px';
+  tempDiv.style.position = 'absolute';
+  tempDiv.style.left = '0';
   tempDiv.style.top = '0';
-  tempDiv.style.width = '8.5in';
-  tempDiv.innerHTML = htmlContent;
+  tempDiv.style.width = '816px'; // 8.5in at 96dpi
+  tempDiv.style.zIndex = '-9999';
+  tempDiv.style.opacity = '0';
+  tempDiv.style.pointerEvents = 'none';
+  tempDiv.innerHTML = cleanHtml;
   document.body.appendChild(tempDiv);
 
-  const safeAddr = (propertyAddress || 'report').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
-  const opt = {
-    margin: 0,
-    filename: `${safeAddr}_revenue_report.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-    pagebreak: { mode: ['css', 'legacy'], avoid: '.no-break' }
-  };
+  // Wait for images to load
+  const imgs = tempDiv.querySelectorAll('img');
+  await Promise.all([...imgs].map(img => {
+    if (img.complete) return Promise.resolve();
+    return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+  }));
+  // Small delay for rendering
+  await new Promise(r => setTimeout(r, 300));
 
-  await html2pdf().set(opt).from(tempDiv).save();
+  const safeAddr = (propertyAddress || 'report').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+  const pages = tempDiv.querySelectorAll('.page');
+  if (pages.length === 0) {
+    console.error('No .page elements found in report HTML');
+    document.body.removeChild(tempDiv);
+    return;
+  }
+
+  const pdf = new jspdf.jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
+  const pageW = 215.9; // letter width mm
+  const pageH = 279.4; // letter height mm
+
+  for (let i = 0; i < pages.length; i++) {
+    if (i > 0) pdf.addPage();
+    const canvas = await html2canvas(pages[i], {
+      scale: 2,
+      useCORS: true,
+      letterRendering: true,
+      width: 816,
+      windowWidth: 816,
+    });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(imgData, 'JPEG', 0, 0, pageW, pageH);
+  }
+
+  pdf.save(`${safeAddr}_revenue_report.pdf`);
   document.body.removeChild(tempDiv);
 }
 
