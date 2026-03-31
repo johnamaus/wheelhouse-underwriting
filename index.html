@@ -1391,50 +1391,55 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const [reportComps, setReportComps] = useState(new Set());
   const [generating, setGenerating] = useState(false);
 
-  // Templates
-  const [templates, setTemplates] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('wh_report_templates') || '{}'); } catch { return {}; }
+  // PM Company Templates
+  const [pmTemplates, setPmTemplates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wh_pm_templates') || '{}'); } catch { return {}; }
   });
-  const [templateName, setTemplateName] = useState('');
-  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [pmTplName, setPmTplName] = useState('');
+  const [showSavePm, setShowSavePm] = useState(false);
 
-  const getTemplateData = () => ({
-    companyName, companyLogo, companyImage, companyDesc,
-    highlight1, highlight2, highlight3,
-    agentName, agentImage, agentEmail, agentPhone
-  });
-
-  const saveTemplate = () => {
-    const name = templateName.trim();
+  const savePmTemplate = () => {
+    const name = pmTplName.trim();
     if (!name) return;
-    const updated = { ...templates, [name]: getTemplateData() };
-    setTemplates(updated);
-    localStorage.setItem('wh_report_templates', JSON.stringify(updated));
-    setTemplateName('');
-    setShowSaveTemplate(false);
+    const updated = { ...pmTemplates, [name]: { companyName, companyLogo, companyImage, companyDesc, highlight1, highlight2, highlight3 } };
+    setPmTemplates(updated);
+    localStorage.setItem('wh_pm_templates', JSON.stringify(updated));
+    setPmTplName(''); setShowSavePm(false);
+  };
+  const loadPmTemplate = (name) => {
+    const t = pmTemplates[name]; if (!t) return;
+    setCompanyName(t.companyName || ''); setCompanyLogo(t.companyLogo || null);
+    setCompanyImage(t.companyImage || null); setCompanyDesc(t.companyDesc || '');
+    setHighlight1(t.highlight1 || ''); setHighlight2(t.highlight2 || ''); setHighlight3(t.highlight3 || '');
+  };
+  const deletePmTemplate = (name) => {
+    const updated = { ...pmTemplates }; delete updated[name];
+    setPmTemplates(updated); localStorage.setItem('wh_pm_templates', JSON.stringify(updated));
   };
 
-  const loadTemplate = (name) => {
-    const t = templates[name];
-    if (!t) return;
-    setCompanyName(t.companyName || '');
-    setCompanyLogo(t.companyLogo || null);
-    setCompanyImage(t.companyImage || null);
-    setCompanyDesc(t.companyDesc || '');
-    setHighlight1(t.highlight1 || '');
-    setHighlight2(t.highlight2 || '');
-    setHighlight3(t.highlight3 || '');
-    setAgentName(t.agentName || '');
-    setAgentImage(t.agentImage || null);
-    setAgentEmail(t.agentEmail || '');
-    setAgentPhone(t.agentPhone || '');
-  };
+  // Agent Templates
+  const [agentTemplates, setAgentTemplates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wh_agent_templates') || '{}'); } catch { return {}; }
+  });
+  const [agentTplName, setAgentTplName] = useState('');
+  const [showSaveAgent, setShowSaveAgent] = useState(false);
 
-  const deleteTemplate = (name) => {
-    const updated = { ...templates };
-    delete updated[name];
-    setTemplates(updated);
-    localStorage.setItem('wh_report_templates', JSON.stringify(updated));
+  const saveAgentTemplate = () => {
+    const name = agentTplName.trim();
+    if (!name) return;
+    const updated = { ...agentTemplates, [name]: { agentName, agentImage, agentEmail, agentPhone } };
+    setAgentTemplates(updated);
+    localStorage.setItem('wh_agent_templates', JSON.stringify(updated));
+    setAgentTplName(''); setShowSaveAgent(false);
+  };
+  const loadAgentTemplate = (name) => {
+    const t = agentTemplates[name]; if (!t) return;
+    setAgentName(t.agentName || ''); setAgentImage(t.agentImage || null);
+    setAgentEmail(t.agentEmail || ''); setAgentPhone(t.agentPhone || '');
+  };
+  const deleteAgentTemplate = (name) => {
+    const updated = { ...agentTemplates }; delete updated[name];
+    setAgentTemplates(updated); localStorage.setItem('wh_agent_templates', JSON.stringify(updated));
   };
 
   // Sync PM name if changed
@@ -1496,29 +1501,6 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         {!hasProjection && <div style={{background:'#fff3cd',border:'1px solid #ffc107',borderRadius:8,padding:'10px 14px',fontSize:13,color:'#856404',marginTop:10}}>Run a search and select comps first to include projection data in your report.</div>}
       </div>
 
-      {/* Template Bar */}
-      <div style={{...sectionStyle,padding:'14px 20px',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-        <span style={{fontSize:12,fontWeight:600,color:'var(--text-sec)'}}>Templates:</span>
-        {Object.keys(templates).length === 0 && <span style={{fontSize:12,color:'var(--text-muted)'}}>No saved templates</span>}
-        {Object.keys(templates).map(name => (
-          <div key={name} style={{display:'flex',alignItems:'center',gap:4}}>
-            <button onClick={()=>loadTemplate(name)} style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:600,cursor:'pointer'}}>{name}</button>
-            <button onClick={()=>deleteTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:14,padding:'2px 4px',lineHeight:1}} title="Delete template">&times;</button>
-          </div>
-        ))}
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
-          {showSaveTemplate ? (
-            <>
-              <input value={templateName} onChange={e=>setTemplateName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&saveTemplate()} style={{...inputStyle,width:160,padding:'5px 10px',fontSize:12}} />
-              <button onClick={saveTemplate} disabled={!templateName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer'}}>Save</button>
-              <button onClick={()=>setShowSaveTemplate(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:6,padding:'5px 10px',fontSize:12,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
-            </>
-          ) : (
-            <button onClick={()=>setShowSaveTemplate(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:12,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save as Template</button>
-          )}
-        </div>
-      </div>
-
       {/* Cover Page Info */}
       <div style={sectionStyle}>
         <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Cover Page</h3>
@@ -1545,7 +1527,26 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
 
       {/* Company Info */}
       <div style={sectionStyle}>
-        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Property Management Company</h3>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}>
+          <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Property Management Company</h3>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+            {Object.keys(pmTemplates).map(name => (
+              <div key={name} style={{display:'flex',alignItems:'center',gap:3}}>
+                <button onClick={()=>loadPmTemplate(name)} style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>{name}</button>
+                <button onClick={()=>deletePmTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,padding:'1px 3px',lineHeight:1}} title="Delete">&times;</button>
+              </div>
+            ))}
+            {showSavePm ? (
+              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                <input value={pmTplName} onChange={e=>setPmTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&savePmTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
+                <button onClick={savePmTemplate} disabled={!pmTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
+                <button onClick={()=>setShowSavePm(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
+              </div>
+            ) : (
+              <button onClick={()=>setShowSavePm(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save as Template</button>
+            )}
+          </div>
+        </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
           <div>
             <label style={labelStyle}>Company Name</label>
@@ -1578,7 +1579,26 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
 
       {/* Sales Agent */}
       <div style={sectionStyle}>
-        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Sales Agent</h3>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}>
+          <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Sales Agent</h3>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+            {Object.keys(agentTemplates).map(name => (
+              <div key={name} style={{display:'flex',alignItems:'center',gap:3}}>
+                <button onClick={()=>loadAgentTemplate(name)} style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>{name}</button>
+                <button onClick={()=>deleteAgentTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,padding:'1px 3px',lineHeight:1}} title="Delete">&times;</button>
+              </div>
+            ))}
+            {showSaveAgent ? (
+              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                <input value={agentTplName} onChange={e=>setAgentTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&saveAgentTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
+                <button onClick={saveAgentTemplate} disabled={!agentTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
+                <button onClick={()=>setShowSaveAgent(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
+              </div>
+            ) : (
+              <button onClick={()=>setShowSaveAgent(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save as Template</button>
+            )}
+          </div>
+        </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
           <div>
             <label style={labelStyle}>Agent Name</label>
