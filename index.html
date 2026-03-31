@@ -2002,8 +2002,9 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', -apple-system, sans-serif; color: #1a1a2e; background: #fff; width: 8.5in; margin: 0 auto; -webkit-font-smoothing: antialiased; }
-    .page { width: 8.5in; min-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; }
+    .page { width: 8.5in; min-height: 11in; max-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; }
     .page:last-child { page-break-after: avoid; }
+    .page + .page { border-top: 3px dashed #ccc; }
 
     /* ── COLOR TOKENS ── */
     :root { --dk: #3a3a3c; --gold: #b8976a; --tan: #e8e0d0; --body-bg: #fff; --text: #1d1d1f; --text-sec: #6e6e73; }
@@ -2019,27 +2020,29 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .cover-title-sub { font-size: 10px; font-weight: 500; color: var(--text-sec); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px; }
     .cover-hero { margin: 0 40px; height: 420px; overflow: hidden; border-radius: 3px; }
     .cover-hero img { width: 100%; height: 100%; object-fit: cover; }
-    .cover-stats-bar { margin: 20px 0 0; background: var(--tan); padding: 28px 40px; display: flex; align-items: center; }
-    .cover-stats-left { display: flex; flex-direction: column; gap: 10px; }
+    .cover-spacer { flex: 1; }
+    .cover-stats-bar { background: var(--tan); padding: 28px 40px; display: flex; align-items: center; }
+    .cover-stats-left { display: flex; flex-direction: column; gap: 10px; width: 200px; }
     .cover-stat-item { display: flex; align-items: center; gap: 10px; }
     .cover-stat-icon { font-size: 22px; color: var(--text-sec); }
     .cover-stat-text { font-size: 16px; font-weight: 600; color: var(--text); }
-    .cover-stats-divider { width: 1px; height: 60px; background: #c5b88a; margin: 0 30px; }
+    .cover-stats-divider { width: 1px; height: 60px; background: #c5b88a; margin: 0 40px; }
     .cover-revenue-area { flex: 1; text-align: right; }
     .cover-revenue-label { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
     .cover-revenue-range { font-size: 36px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
-    .cover-agent-section { padding: 20px 40px; display: flex; align-items: center; gap: 16px; }
-    .cover-agent-cta { flex: 1; }
+    .cover-spacer2 { flex: 1; }
+    .cover-agent-section { padding: 20px 40px; display: flex; align-items: center; }
+    .cover-agent-cta { flex: 0 1 340px; }
     .cover-agent-cta .cta-head { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
     .cover-agent-cta .cta-text { font-size: 12px; color: var(--text-sec); line-height: 1.65; }
-    .cover-agent-divider { width: 1px; height: 70px; background: #ddd; margin: 0 10px; }
-    .cover-agent-right { display: flex; align-items: center; gap: 16px; }
+    .cover-agent-divider { width: 1px; height: 80px; background: #ddd; margin: 0 24px; }
+    .cover-agent-right { display: flex; align-items: center; gap: 16px; flex: 1; }
     .cover-agent-info { text-align: left; }
     .cover-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
     .cover-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
     .cover-agent-contact .icon { color: var(--gold); font-size: 13px; }
     .cover-agent-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
-    .cover-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; margin-top: auto; }
+    .cover-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
     /* ── PAGE HEADER ── */
     .pg-header { padding: 20px 30px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--dk); margin: 0 0 20px; }
@@ -2058,7 +2061,8 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .p2-title-sub { font-size: 10px; font-weight: 500; color: var(--text-sec); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px; }
     .p2-banner { margin: 0 40px; height: 380px; overflow: hidden; border-radius: 3px; }
     .p2-banner img { width: 100%; height: 100%; object-fit: cover; }
-    .p2-content { background: var(--tan); margin: 20px 0 0; padding: 32px 40px; display: flex; gap: 0; align-items: stretch; }
+    .p2-spacer { flex: 1; }
+    .p2-content { background: var(--tan); padding: 32px 40px; display: flex; gap: 0; align-items: stretch; }
     .p2-about { flex: 1; padding-right: 30px; display: flex; flex-direction: column; justify-content: center; }
     .p2-about-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 10px; text-align: center; }
     .p2-about-divider { width: 60px; height: 2px; background: var(--gold); margin: 0 auto 16px; }
@@ -2069,18 +2073,18 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .p2-diff-item { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
     .p2-diff-check { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
     .p2-diff-text { font-size: 14px; color: var(--text); font-weight: 500; }
-    .p2-agent-section { padding: 20px 40px; display: flex; align-items: center; gap: 16px; }
-    .p2-agent-cta { flex: 1; }
+    .p2-agent-section { padding: 20px 40px; display: flex; align-items: center; }
+    .p2-agent-cta { flex: 0 1 340px; }
     .p2-agent-cta .cta-head { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
     .p2-agent-cta .cta-text { font-size: 12px; color: var(--text-sec); line-height: 1.65; }
-    .p2-agent-divider { width: 1px; height: 70px; background: #ddd; margin: 0 10px; }
-    .p2-agent-right { display: flex; align-items: center; gap: 16px; }
+    .p2-agent-divider { width: 1px; height: 80px; background: #ddd; margin: 0 24px; }
+    .p2-agent-right { display: flex; align-items: center; gap: 16px; flex: 1; }
     .p2-agent-info { text-align: left; }
     .p2-agent-name { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
     .p2-agent-contact { font-size: 12px; color: var(--text-sec); display: flex; align-items: center; gap: 7px; margin-top: 4px; }
     .p2-agent-contact .icon { color: var(--gold); font-size: 13px; }
     .p2-agent-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); }
-    .p2-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; margin-top: auto; }
+    .p2-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
     /* ── PAGE 3: PROJECTIONS ── */
     .section-title { font-size: 11px; font-weight: 800; color: var(--dk); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -2118,7 +2122,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     <div class="cover-logo-area">
       ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : `<span class="co-name">${companyName || ''}</span>`}
     </div>
-    <div class="cover-title-area" style="text-align:center;flex:1;">
+    <div class="cover-title-area">
       <div class="cover-title-addr">${propAddr.split(',')[0] || propAddr}</div>
       <div class="cover-title-sub">Annual Revenue Potential</div>
     </div>
@@ -2126,6 +2130,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
   <div class="cover-hero">
     ${heroImageData ? `<img src="${heroImageData}" alt="Property">` : `<div style="width:100%;height:100%;background:#ddd;"></div>`}
   </div>
+  <div class="cover-spacer"></div>
   <div class="cover-stats-bar">
     <div class="cover-stats-left">
       ${reportBeds ? `<div class="cover-stat-item"><span class="cover-stat-icon">🛏️</span><span class="cover-stat-text">${reportBeds} Bedrooms</span></div>` : ''}
@@ -2137,6 +2142,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       <div class="cover-revenue-range">${fmtUSD(conservativeAnnual)} - ${fmtUSD(aggressiveAnnual)}*</div>
     </div>
   </div>
+  <div class="cover-spacer2"></div>
   <div class="cover-agent-section">
     <div class="cover-agent-cta">
       <div class="cta-head">Contact us to get started today</div>
@@ -2161,7 +2167,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     <div class="p2-logo-area">
       ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : `<span class="co-name">${companyName || ''}</span>`}
     </div>
-    <div class="p2-title-area" style="text-align:center;flex:1;">
+    <div class="p2-title-area">
       <div class="p2-title-addr">${propAddr.split(',')[0] || propAddr}</div>
       <div class="p2-title-sub">Annual Revenue Potential</div>
     </div>
@@ -2169,6 +2175,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
   <div class="p2-banner">
     ${companyImageData ? `<img src="${companyImageData}" alt="Company">` : heroImageData ? `<img src="${heroImageData}" alt="Property">` : `<div style="width:100%;height:100%;background:#ddd;"></div>`}
   </div>
+  <div class="p2-spacer"></div>
   <div class="p2-content">
     <div class="p2-about">
       <div class="p2-about-title">About Us</div>
@@ -2181,6 +2188,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       ${highlights.map(h => `<div class="p2-diff-item"><div class="p2-diff-check">✓</div><div class="p2-diff-text">${h}</div></div>`).join('')}
     </div>` : ''}
   </div>
+  <div class="p2-spacer"></div>
   <div class="p2-agent-section">
     <div class="p2-agent-cta">
       <div class="cta-head">Contact us to get started today</div>
