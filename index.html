@@ -1472,8 +1472,9 @@ function AdminPanel() {
 
 /* ═══════════════ REPORT PANEL ═══════════════ */
 function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality }) {
-  const [ownerName, setOwnerName] = useState('');
   const [heroImage, setHeroImage] = useState(null);
+  const [reportBeds, setReportBeds] = useState(projection?.medBeds ? Math.round(projection.medBeds) : '');
+  const [reportBaths, setReportBaths] = useState(projection?.medBaths ? Math.round(projection.medBaths) : '');
   const [companyName, setCompanyName] = useState(pmCompany?.name || '');
   const [companyLogo, setCompanyLogo] = useState(null);
   const [companyImage, setCompanyImage] = useState(null);
@@ -1574,8 +1575,9 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
     setGenerating(true);
     try {
       const reportExtras = {
-        ownerName,
         heroImageData: heroImage,
+        reportBeds,
+        reportBaths,
         companyName,
         companyLogoData: companyLogo,
         companyImageData: companyImage,
@@ -1648,9 +1650,9 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         </div>
       </div>
 
-      {/* Cover Page Info */}
+      {/* Property Details */}
       <div style={sectionStyle}>
-        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Cover Page</h3>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Property Details</h3>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
           <div style={{gridColumn:'1/-1'}}>
             <label style={labelStyle}>Listing Address</label>
@@ -1662,10 +1664,14 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
             {heroImage && <img src={heroImage} style={{marginTop:8,maxHeight:120,borderRadius:8,objectFit:'cover'}} alt="Hero preview" />}
           </div>
           <div>
-            <label style={labelStyle}>Prepared For (Owner Name)</label>
-            <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. John Smith" style={inputStyle} />
+            <label style={labelStyle}>Bedrooms</label>
+            <input type="number" value={reportBeds} onChange={e=>setReportBeds(e.target.value)} placeholder="e.g. 3" style={inputStyle} />
           </div>
           <div>
+            <label style={labelStyle}>Bathrooms</label>
+            <input type="number" value={reportBaths} onChange={e=>setReportBaths(e.target.value)} placeholder="e.g. 2" style={inputStyle} />
+          </div>
+          <div style={{gridColumn:'1/-1'}}>
             <label style={labelStyle}>Annual Revenue Range</label>
             <input value={hasProjection ? `$${conservativeRev.toLocaleString()} — $${aggressiveRev.toLocaleString()}` : 'No projection data'} disabled style={{...inputStyle,background:'var(--surface2)',color:'var(--text-muted)'}} />
           </div>
@@ -1724,7 +1730,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
             {companyImage && <img src={companyImage} style={{marginTop:8,maxHeight:100,borderRadius:8,objectFit:'cover',width:'100%'}} alt="Banner preview" />}
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelStyle}>Company Description</label>
+            <label style={labelStyle}>About Us</label>
             <textarea value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} rows={3} placeholder="Brief description of your company..." style={{...inputStyle,resize:'vertical'}} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
@@ -1909,7 +1915,7 @@ function buildRangeChartSVG(title, monthlyData, formatter, color) {
 
 async function generateReport(projection, assumptions, comps, selectedComps, pmCompany, propertyAddress, seasonality, extras) {
   const {
-    ownerName, heroImageData, companyName, companyLogoData, companyImageData,
+    heroImageData, reportBeds, reportBaths, companyName, companyLogoData, companyImageData,
     companyDesc, highlights, agentName, agentImageData, agentEmail, agentPhone,
     includeComps, selectedCompIds, reportAccent: _ra, reportAccent2: _ra2
   } = extras || {};
@@ -2022,7 +2028,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .cover-revenue-area { flex: 1; text-align: right; }
     .cover-revenue-label { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
     .cover-revenue-range { font-size: 36px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
-    .cover-agent-section { padding: 28px 40px; display: flex; align-items: center; gap: 16px; flex: 1; }
+    .cover-agent-section { padding: 20px 40px; display: flex; align-items: center; gap: 16px; }
     .cover-agent-cta { flex: 1; }
     .cover-agent-cta .cta-head { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
     .cover-agent-cta .cta-text { font-size: 12px; color: var(--text-sec); line-height: 1.65; }
@@ -2063,7 +2069,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .p2-diff-item { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
     .p2-diff-check { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
     .p2-diff-text { font-size: 14px; color: var(--text); font-weight: 500; }
-    .p2-agent-section { padding: 28px 40px; display: flex; align-items: center; gap: 16px; flex: 1; }
+    .p2-agent-section { padding: 20px 40px; display: flex; align-items: center; gap: 16px; }
     .p2-agent-cta { flex: 1; }
     .p2-agent-cta .cta-head { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
     .p2-agent-cta .cta-text { font-size: 12px; color: var(--text-sec); line-height: 1.65; }
@@ -2112,19 +2118,18 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     <div class="cover-logo-area">
       ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : `<span class="co-name">${companyName || ''}</span>`}
     </div>
-    <div class="cover-title-area">
+    <div class="cover-title-area" style="text-align:center;flex:1;">
       <div class="cover-title-addr">${propAddr.split(',')[0] || propAddr}</div>
       <div class="cover-title-sub">Annual Revenue Potential</div>
     </div>
-    <div style="width:80px"></div>
   </div>
   <div class="cover-hero">
     ${heroImageData ? `<img src="${heroImageData}" alt="Property">` : `<div style="width:100%;height:100%;background:#ddd;"></div>`}
   </div>
   <div class="cover-stats-bar">
     <div class="cover-stats-left">
-      ${projection?.medBeds ? `<div class="cover-stat-item"><span class="cover-stat-icon">🛏️</span><span class="cover-stat-text">${Math.round(projection.medBeds)} Bedrooms</span></div>` : ''}
-      ${projection?.medBaths ? `<div class="cover-stat-item"><span class="cover-stat-icon">🛁</span><span class="cover-stat-text">${Math.round(projection.medBaths)} Bathrooms</span></div>` : ''}
+      ${reportBeds ? `<div class="cover-stat-item"><span class="cover-stat-icon">🛏️</span><span class="cover-stat-text">${reportBeds} Bedrooms</span></div>` : ''}
+      ${reportBaths ? `<div class="cover-stat-item"><span class="cover-stat-icon">🛁</span><span class="cover-stat-text">${reportBaths} Bathrooms</span></div>` : ''}
     </div>
     <div class="cover-stats-divider"></div>
     <div class="cover-revenue-area">
@@ -2156,11 +2161,10 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     <div class="p2-logo-area">
       ${companyLogoData ? `<img src="${companyLogoData}" alt="Logo">` : `<span class="co-name">${companyName || ''}</span>`}
     </div>
-    <div class="p2-title-area">
+    <div class="p2-title-area" style="text-align:center;flex:1;">
       <div class="p2-title-addr">${propAddr.split(',')[0] || propAddr}</div>
       <div class="p2-title-sub">Annual Revenue Potential</div>
     </div>
-    <div style="width:80px"></div>
   </div>
   <div class="p2-banner">
     ${companyImageData ? `<img src="${companyImageData}" alt="Company">` : heroImageData ? `<img src="${heroImageData}" alt="Property">` : `<div style="width:100%;height:100%;background:#ddd;"></div>`}
