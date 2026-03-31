@@ -1197,7 +1197,8 @@ function ProfilePanel({ authUser, onLogout, setAuthUser }) {
   const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%' };
 
   return (
-    <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+    <div style={{display:'flex',flexDirection:'column',gap:20}}>
+      <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
       {/* Profile info */}
       <div style={{ flex:'1 1 400px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24 }}>
         <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Profile</h2>
@@ -1235,6 +1236,9 @@ function ProfilePanel({ authUser, onLogout, setAuthUser }) {
           {pwErr && <div style={{color:'var(--red)',fontSize:13,marginTop:8}}>{pwErr}</div>}
         </form>
       </div>
+      </div>
+      {/* Admin section for admins */}
+      {authUser?.is_admin && <AdminPanel />}
     </div>
   );
 }
@@ -1640,7 +1644,7 @@ function App({ authUser, onLogout, setAuthUser }) {
           <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
-          {authUser?.is_admin && <TabBtn label="Admin" active={view==='admin'} onClick={()=>setView('admin')} />}
+
           <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -2193,8 +2197,7 @@ function App({ authUser, onLogout, setAuthUser }) {
       {/* ─── Profile ─── */}
       {view==='profile' && <ProfilePanel authUser={authUser} onLogout={onLogout} setAuthUser={setAuthUser} />}
 
-      {/* ─── Admin ─── */}
-      {view==='admin' && authUser?.is_admin && <AdminPanel />}
+      {/* Admin panel moved into ProfilePanel for admins */}
     </div>
   );
 }
