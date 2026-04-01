@@ -2341,24 +2341,27 @@ ${includeComps && reportCompList.length > 0 ? `
     <div class="p4-title">Select Comparable Property Detail</div>
     ${mapImageData ? `<div class="comp-map-container"><img src="${mapImageData}" alt="Comp Map"></div>` : ''}
     ${reportCompList.map((c, idx) => {
-      const compRevenue = c.nrevenue_365_0 || 0;
+      const compGross = c.nrevenue_365_0 || 0;
       const compOcc = c.occupancy_365_0 || 0;
-      const compADR = c.anr_365_0 || 0;
+      const compRental = _pdfComputeRentalMonthly(compGross, 1.0);
+      const compRentalRev = compRental.rental;
+      const compOccNights = DAYS_IN_MONTH.reduce((s, d, i) => s + Math.round(d * Math.min(compOcc * SEASON_OCC[i], 1.0)), 0);
+      const compADR = compOccNights > 0 ? compRentalRev / compOccNights : 0;
       const dotColor = COMP_COLORS[idx % COMP_COLORS.length];
-      const monthlyRevEst = MONTHS.map((_, i) => Math.round(compRevenue * SEASON_REV[i] / 12));
-      const monthlyOccEst = MONTHS.map((_, i) => (compOcc * 100 * SEASON_REV[i]).toFixed(1));
-      const monthlyADREst = MONTHS.map((_, i) => Math.round(compADR * (0.85 + 0.3 * SEASON_REV[i])));
+      const monthlyRentalEst = compRental.monthly.map(m => Math.round(m.rental));
+      const monthlyOccEst = MONTHS.map((_, i) => (compOcc * 100 * SEASON_OCC[i]).toFixed(1));
+      const monthlyADREst = compRental.monthly.map((m, i) => { const mOccN = Math.round(DAYS_IN_MONTH[i] * Math.min(compOcc * SEASON_OCC[i], 1.0)); return mOccN > 0 ? Math.round(m.rental / mOccN) : 0; });
       return `
       <div class="comp-block">
         <div class="comp-block-header">
           <div class="comp-block-dot" style="background:${dotColor}"></div>
           <div class="comp-block-name">${(c.title || 'Comp').substring(0, 50)} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
-          <div class="comp-block-meta">Annual: ${fmtUSD(Math.round(compRevenue))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
+          <div class="comp-block-meta">Annual: ${fmtUSD(Math.round(compRentalRev))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
         </div>
         <table class="data-table comp">
           <thead><tr><th>Metric</th>${MONTHS.map(m => `<th>${m}</th>`).join('')}<th>Total</th></tr></thead>
           <tbody>
-            <tr><td class="row-label">Revenue</td>${monthlyRevEst.map(v=>`<td>${fmtUSD(v)}</td>`).join('')}<td style="font-weight:700">${fmtUSD(Math.round(compRevenue))}</td></tr>
+            <tr><td class="row-label">Rental Revenue</td>${monthlyRentalEst.map(v=>`<td>${fmtUSD(v)}</td>`).join('')}<td style="font-weight:700">${fmtUSD(Math.round(compRentalRev))}</td></tr>
             <tr><td class="row-label">Occupancy</td>${monthlyOccEst.map(v=>`<td>${v}%</td>`).join('')}<td style="font-weight:700">${(compOcc * 100).toFixed(1)}%</td></tr>
             <tr><td class="row-label">ADR</td>${monthlyADREst.map(v=>`<td>${fmtUSD(v)}</td>`).join('')}<td style="font-weight:700">${fmtUSD(Math.round(compADR))}</td></tr>
           </tbody>
