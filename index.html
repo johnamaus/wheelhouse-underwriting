@@ -2916,42 +2916,6 @@ function App({ authUser, onLogout, setAuthUser }) {
             <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Property Management Company</div>
             <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:12}}>Enter the PM fee structure.</div>
 
-            {/* Fee template selector */}
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
-              {!showSaveFee ? (
-                Object.keys(feeTemplates).length > 0 ? (
-                  <div style={{display:'flex',alignItems:'center',gap:6,flex:1,flexWrap:'wrap'}}>
-                    {showFeeSelect ? (
-                      <div style={{display:'flex',flexDirection:'column',gap:4,width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:8}}>
-                        {Object.keys(feeTemplates).map(name => (
-                          <div key={name} style={{display:'flex',alignItems:'center',gap:6}}>
-                            <button onClick={()=>loadFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
-                            <button onClick={()=>deleteFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:10}}>✕</button>
-                          </div>
-                        ))}
-                        <button onClick={()=>setShowFeeSelect(false)} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:11,cursor:'pointer',marginTop:2}}>Cancel</button>
-                      </div>
-                    ) : (
-                      <>
-                        <button onClick={()=>setShowFeeSelect(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
-                          {activeFeeTemplate ? `Fee Template: ${activeFeeTemplate}` : 'Select Fee Template'}
-                        </button>
-                        <button onClick={()=>setShowSaveFee(true)} style={{background:'none',border:'none',color:'var(--accent)',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save Current</button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <button onClick={()=>setShowSaveFee(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>Save as Fee Template</button>
-                )
-              ) : (
-                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <input value={feeTplName} onChange={e=>setFeeTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&saveFeeTemplate()} style={{...inputStyle,width:150,padding:'5px 8px',fontSize:11}} />
-                  <button onClick={saveFeeTemplate} disabled={!feeTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'5px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
-                  <button onClick={()=>{setShowSaveFee(false);setFeeTplName('');}} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:11,cursor:'pointer'}}>Cancel</button>
-                </div>
-              )}
-            </div>
-
             <div style={{fontSize:13,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:12}}>Fee Structure</div>
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14,marginBottom:20}}>
@@ -2995,6 +2959,44 @@ function App({ authUser, onLogout, setAuthUser }) {
                 </div>
               </div>
             )}
+
+            {/* Fee template save/load */}
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+              {Object.keys(feeTemplates).length > 0 && !showFeeSelect && !showSaveFee && (
+                <button onClick={()=>setShowFeeSelect(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
+                  {activeFeeTemplate ? `Template: ${activeFeeTemplate}` : 'Load Fee Template'}
+                </button>
+              )}
+              {!showSaveFee && !showFeeSelect && (pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee) && (
+                <button onClick={()=>setShowSaveFee(true)} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                  Save as Template
+                </button>
+              )}
+              {showFeeSelect && (
+                <div style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:12}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--text-sec)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:8}}>Saved Fee Templates</div>
+                  {Object.keys(feeTemplates).map(name => {
+                    const t = feeTemplates[name];
+                    const desc = [t.perStayFee&&`$${t.perStayFee}/stay`, t.perNightFee&&`$${t.perNightFee}/night`, t.pctFee&&`${t.pctFee}%`].filter(Boolean).join(' + ');
+                    return (
+                      <div key={name} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--border-light)'}}>
+                        <button onClick={()=>loadFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:13,fontWeight:600,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
+                        <span style={{fontSize:11,color:'var(--text-muted)'}}>{desc}</span>
+                        <button onClick={()=>deleteFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:12,padding:'2px 6px'}}>✕</button>
+                      </div>
+                    );
+                  })}
+                  <button onClick={()=>setShowFeeSelect(false)} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:12,cursor:'pointer',marginTop:8}}>Cancel</button>
+                </div>
+              )}
+              {showSaveFee && (
+                <div style={{display:'flex',alignItems:'center',gap:8,width:'100%'}}>
+                  <input value={feeTplName} onChange={e=>setFeeTplName(e.target.value)} placeholder="Template name (e.g. Eden Crest)" onKeyDown={e=>e.key==='Enter'&&saveFeeTemplate()} style={{...inputStyle,flex:1,padding:'8px 12px',fontSize:13}} />
+                  <button onClick={saveFeeTemplate} disabled={!feeTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',opacity:feeTplName.trim()?1:0.4}}>Save</button>
+                  <button onClick={()=>{setShowSaveFee(false);setFeeTplName('');}} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:12,cursor:'pointer'}}>Cancel</button>
+                </div>
+              )}
+            </div>
 
             <div style={{display:'flex',gap:10}}>
               <button onClick={()=>setView('comps')} style={{flex:1,padding:12,border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:14,fontWeight:600}}>
