@@ -2298,6 +2298,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     </div>
   </div>
   <div class="pg-body">
+    <div class="p4-title">Revenue Projections</div>
     ${['conservative','base','aggressive'].map(key => {
       const label = key === 'conservative' ? 'Conservative Case' : key === 'base' ? 'Base Case' : 'Aggressive Case';
       const revVals = monthlyRentals[key];
