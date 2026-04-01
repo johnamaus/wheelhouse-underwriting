@@ -2343,7 +2343,7 @@ ${includeComps && reportCompList.length > 0 ? `
     ${reportCompList.map((c, idx) => {
       const compGross = c.nrevenue_365_0 || 0;
       const compOcc = c.occupancy_365_0 || 0;
-      const compRental = _pdfComputeRentalMonthly(compGross, 1.0);
+      const compRental = computeMonthly(compGross, 1.0);
       const compRentalRev = compRental.rental;
       const compOccNights = DAYS_IN_MONTH.reduce((s, d, i) => s + Math.round(d * Math.min(compOcc * SEASON_OCC[i], 1.0)), 0);
       const compADR = compOccNights > 0 ? compRentalRev / compOccNights : 0;
