@@ -2516,6 +2516,34 @@ function App({ authUser, onLogout, setAuthUser }) {
   const [pmCompany, setPmCompany] = useState({ name: '', website: '', perStayFee: '', perNightFee: '', pctFee: '' });
   const updatePM = (k, v) => setPmCompany(p => ({ ...p, [k]: v }));
 
+  // Fee structure templates
+  const [feeTemplates, setFeeTemplates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wh_fee_templates') || '{}'); } catch { return {}; }
+  });
+  const [showSaveFee, setShowSaveFee] = useState(false);
+  const [feeTplName, setFeeTplName] = useState('');
+  const [showFeeSelect, setShowFeeSelect] = useState(false);
+  const [activeFeeTemplate, setActiveFeeTemplate] = useState('');
+
+  const saveFeeTemplate = () => {
+    const name = feeTplName.trim();
+    if (!name) return;
+    const updated = { ...feeTemplates, [name]: { perStayFee: pmCompany.perStayFee, perNightFee: pmCompany.perNightFee, pctFee: pmCompany.pctFee } };
+    setFeeTemplates(updated);
+    localStorage.setItem('wh_fee_templates', JSON.stringify(updated));
+    setFeeTplName(''); setShowSaveFee(false); setActiveFeeTemplate(name);
+  };
+  const loadFeeTemplate = (name) => {
+    const t = feeTemplates[name]; if (!t) return;
+    setActiveFeeTemplate(name); setShowFeeSelect(false);
+    setPmCompany(p => ({ ...p, perStayFee: t.perStayFee || '', perNightFee: t.perNightFee || '', pctFee: t.pctFee || '' }));
+  };
+  const deleteFeeTemplate = (name) => {
+    const updated = { ...feeTemplates }; delete updated[name];
+    setFeeTemplates(updated); localStorage.setItem('wh_fee_templates', JSON.stringify(updated));
+    if (activeFeeTemplate === name) setActiveFeeTemplate('');
+  };
+
   // Search history
   const [searchHistory, setSearchHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -2886,7 +2914,43 @@ function App({ authUser, onLogout, setAuthUser }) {
         <div style={{maxWidth:600,margin:'0 auto'}}>
           <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:24}}>
             <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Property Management Company</div>
-            <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:20}}>Enter the PM fee structure.</div>
+            <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:12}}>Enter the PM fee structure.</div>
+
+            {/* Fee template selector */}
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
+              {!showSaveFee ? (
+                Object.keys(feeTemplates).length > 0 ? (
+                  <div style={{display:'flex',alignItems:'center',gap:6,flex:1,flexWrap:'wrap'}}>
+                    {showFeeSelect ? (
+                      <div style={{display:'flex',flexDirection:'column',gap:4,width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:8}}>
+                        {Object.keys(feeTemplates).map(name => (
+                          <div key={name} style={{display:'flex',alignItems:'center',gap:6}}>
+                            <button onClick={()=>loadFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
+                            <button onClick={()=>deleteFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:10}}>✕</button>
+                          </div>
+                        ))}
+                        <button onClick={()=>setShowFeeSelect(false)} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:11,cursor:'pointer',marginTop:2}}>Cancel</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button onClick={()=>setShowFeeSelect(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
+                          {activeFeeTemplate ? `Fee Template: ${activeFeeTemplate}` : 'Select Fee Template'}
+                        </button>
+                        <button onClick={()=>setShowSaveFee(true)} style={{background:'none',border:'none',color:'var(--accent)',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save Current</button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <button onClick={()=>setShowSaveFee(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>Save as Fee Template</button>
+                )
+              ) : (
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <input value={feeTplName} onChange={e=>setFeeTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&saveFeeTemplate()} style={{...inputStyle,width:150,padding:'5px 8px',fontSize:11}} />
+                  <button onClick={saveFeeTemplate} disabled={!feeTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'5px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
+                  <button onClick={()=>{setShowSaveFee(false);setFeeTplName('');}} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:11,cursor:'pointer'}}>Cancel</button>
+                </div>
+              )}
+            </div>
 
             <div style={{fontSize:13,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:12}}>Fee Structure</div>
 
