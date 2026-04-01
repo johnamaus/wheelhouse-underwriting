@@ -1137,11 +1137,10 @@ ${type === 'full-report' ? `
   tempDiv.style.left = '-9999px';
   tempDiv.style.top = '0';
   tempDiv.style.width = '8.5in';
-  tempDiv.innerHTML = htmlContent;
-  document.body.appendChild(tempDiv);
-
   // Remove dashed page break borders for PDF
-  tempDiv.querySelectorAll('.page').forEach(p => { p.style.borderTop = 'none'; });
+  const pdfHtml = htmlContent.replace('.page + .page { border-top: 3px dashed #ccc; }', '.page + .page { border-top: none; }');
+  tempDiv.innerHTML = pdfHtml;
+  document.body.appendChild(tempDiv);
 
   const filename = extras?.reportName || 'revenue_projection';
   const safeFilename = (filename || 'report').replace(/[^a-zA-Z0-9]/g, '_');
@@ -1873,7 +1872,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
 /* ═══════════════ REPORT PDF GENERATION ═══════════════ */
 function buildRangeChartSVG(title, monthlyData, formatter, color) {
   // monthlyData = { conservative: [12 values], base: [12 values], aggressive: [12 values] }
-  const W = 500, H = 180, PAD_L = 50, PAD_R = 15, PAD_T = 25, PAD_B = 30;
+  const W = 680, H = 160, PAD_L = 55, PAD_R = 25, PAD_T = 25, PAD_B = 30;
   const chartW = W - PAD_L - PAD_R, chartH = H - PAD_T - PAD_B;
 
   const allVals = [...monthlyData.conservative, ...monthlyData.base, ...monthlyData.aggressive];
@@ -1894,7 +1893,7 @@ function buildRangeChartSVG(title, monthlyData, formatter, color) {
   const yTicks = Array.from({length: ticks}, (_, i) => minV + (range * i / (ticks - 1)));
 
   return `
-    <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif;">
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif;width:100%;height:auto;">
       <text x="${W/2}" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#1d1d1f">${title}</text>
       <!-- Grid lines -->
       ${yTicks.map(v => `<line x1="${PAD_L}" y1="${y(v)}" x2="${W-PAD_R}" y2="${y(v)}" stroke="#e5e5ea" stroke-width="0.5"/>`).join('')}
@@ -1944,7 +1943,8 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     const monthlyData = [];
     MONTHS.forEach((m, i) => {
       const grossRev = annualGross * mult * SEASON_REV[i] / 12;
-      const occ = Math.min(medOcc * SEASON_OCC[i], 1.0);
+      const occMult = 1 + (mult - 1) * 0.5;
+      const occ = Math.min(medOcc * SEASON_OCC[i] * occMult, 1.0);
       const occN = Math.round(DAYS_IN_MONTH[i] * occ);
       const los = medLOS * SEASON_LOS[i];
       const stays = los > 0 ? occN / los : 0;
@@ -1977,8 +1977,8 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
   const baseAnnual = Math.round(scenarios.base.rental);
   const aggressiveAnnual = Math.round(scenarios.aggressive.rental);
 
-  const revChart = buildRangeChartSVG('Monthly Revenue', monthlyRentals, v => '$' + Math.round(v).toLocaleString(), accentHex);
-  const occChart = buildRangeChartSVG('Monthly Occupancy (%)', monthlyOcc, v => Math.round(v) + '%', accent2Hex);
+  const revChart = buildRangeChartSVG('Monthly Revenue', monthlyRentals, v => '$' + Math.round(v).toLocaleString(), '#7c3aed');
+  const occChart = buildRangeChartSVG('Monthly Occupancy (%)', monthlyOcc, v => Math.round(v) + '%', '#16a34a');
 
   // Selected comps for page 4
   let reportCompList = [];
@@ -2057,7 +2057,10 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .pg-header-title { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: 0.04em; text-transform: uppercase; }
     .pg-header-sub { font-size: 9px; color: var(--text-sec); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
     .pg-body { padding: 0 40px 20px; }
-    .pg-disclaimer-bar { background: var(--tan); padding: 12px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; position: absolute; bottom: 0; left: 0; right: 0; }
+    .pg-powered-by { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 40px 4px; position: absolute; bottom: 36px; left: 0; right: 0; }
+    .pg-powered-by img { height: 16px; width: auto; }
+    .pg-powered-by span { font-size: 8px; color: var(--text-sec); font-weight: 500; }
+    .pg-disclaimer-bar { background: var(--tan); padding: 10px 40px; font-size: 7.5px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; position: absolute; bottom: 0; left: 0; right: 0; }
 
     /* ── PAGE 2: COMPANY ── */
     .p2 { background: #fff; display: flex; flex-direction: column; min-height: 11in; }
@@ -2096,7 +2099,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .p2-disclaimer-bar { background: var(--tan); padding: 14px 40px; font-size: 8px; color: var(--text-sec); text-align: center; font-style: italic; line-height: 1.5; }
 
     /* ── PAGE 3: PROJECTIONS ── */
-    .scenario-block { margin-bottom: 10px; }
+    .scenario-block { margin-bottom: 16px; }
     .scenario-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
     .scenario-dot { width: 10px; height: 10px; border-radius: 50%; }
     .scenario-dot.conservative { background: #EA580C; }
@@ -2117,12 +2120,12 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .data-table td { padding: 4px 4px; text-align: center; border-bottom: 1px solid #eee; font-weight: 500; }
     .data-table tbody tr:nth-child(even) { background: #fafafe; }
     .data-table .row-label { text-align: left; font-weight: 700; color: #1a1a2e; padding-left: 8px; font-size: 7px; }
-    .charts-row { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .charts-row > div { background: #fafafe; border-radius: 8px; padding: 8px; border: 1px solid #eee; }
+    .charts-row { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .charts-row > div { background: #fafafe; border-radius: 8px; padding: 10px 0 10px 0; border: 1px solid #eee; }
 
     /* ── PAGE 4: COMPS ── */
-    .p4-title { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .comp-block { margin-bottom: 10px; }
+    .p4-title { font-size: 21px; font-weight: 800; color: var(--text); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .comp-block { margin-bottom: 14px; }
     .comp-block-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
     .comp-block-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dk); }
     .comp-block-name { font-size: 11px; font-weight: 800; color: var(--text); }
@@ -2267,6 +2270,10 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
       <div>${occChart}</div>
     </div>
   </div>
+  <div class="pg-powered-by">
+    <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2L4 8v16l12 6 12-6V8L16 2z" fill="#7c3aed"/><path d="M10 14l3 8 3-6 3 6 3-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <span>Powered by Wheelhouse</span>
+  </div>
   <div class="pg-disclaimer-bar">*This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only. Revenue is not guaranteed.</div>
 </div>
 
@@ -2283,7 +2290,7 @@ ${includeComps && reportCompList.length > 0 ? `
     </div>
   </div>
   <div class="pg-body">
-    <div class="p4-title">Comparable Property Detail</div>
+    <div class="p4-title">Select Comparable Property Detail</div>
     ${reportCompList.map(c => {
       const compRevenue = c.nrevenue_365_0 || 0;
       const compOcc = c.occupancy_365_0 || 0;
@@ -2308,6 +2315,10 @@ ${includeComps && reportCompList.length > 0 ? `
         </table>
       </div>`;
     }).join('')}
+  </div>
+  <div class="pg-powered-by">
+    <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2L4 8v16l12 6 12-6V8L16 2z" fill="#7c3aed"/><path d="M10 14l3 8 3-6 3 6 3-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <span>Powered by Wheelhouse</span>
   </div>
   <div class="pg-disclaimer-bar">*This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only. Revenue is not guaranteed.</div>
 </div>
