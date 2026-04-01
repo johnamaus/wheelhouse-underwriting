@@ -1477,7 +1477,7 @@ function AdminPanel() {
 }
 
 /* ═══════════════ REPORT PANEL ═══════════════ */
-function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality, lat, lng }) {
+function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality, lat, lng, scenarioRentals }) {
   const [heroImage, setHeroImage] = useState(null);
   const [reportBeds, setReportBeds] = useState(projection?.medBeds ? Math.round(projection.medBeds) : '');
   const [reportBaths, setReportBaths] = useState(projection?.medBaths ? Math.round(projection.medBaths) : '');
@@ -1623,8 +1623,8 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const sectionStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24, marginBottom:16 };
 
   const hasProjection = projection && projection.medRevenue > 0;
-  const conservativeRev = hasProjection ? Math.round(projection.medRevenue * 0.85) : 0;
-  const aggressiveRev = hasProjection ? Math.round(projection.medRevenue * 1.15) : 0;
+  const conservativeRev = scenarioRentals?.conservative || 0;
+  const aggressiveRev = scenarioRentals?.aggressive || 0;
 
   return (
     <div style={{maxWidth:900,margin:'0 auto'}}>
@@ -1682,7 +1682,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
             <input type="number" value={reportBaths} onChange={e=>setReportBaths(e.target.value)} placeholder="e.g. 2" style={inputStyle} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelStyle}>Annual Revenue Range</label>
+            <label style={labelStyle}>Annual Rental Revenue Range</label>
             <input value={hasProjection ? `$${conservativeRev.toLocaleString()} — $${aggressiveRev.toLocaleString()}` : 'No projection data'} disabled style={{...inputStyle,background:'var(--surface2)',color:'var(--text-muted)'}} />
           </div>
         </div>
@@ -2651,6 +2651,26 @@ function App({ authUser, onLogout, setAuthUser }) {
   const selectedComps = useMemo(()=>filteredComps.filter(c=>selected.has(c.listing_id)),[filteredComps,selected]);
   const hiddenComps = comps.length - filteredComps.length;
   const projection = useMemo(()=>computeProjection(selectedComps, assumptions, seasonality),[selectedComps,assumptions,seasonality]);
+  const scenarioRentals = useMemo(() => {
+    if (!projection || !projection.medRevenue || !projection.monthly) return null;
+    const _pn = parseFloat(pmCompany.perNightFee) || 0;
+    const _ps = parseFloat(pmCompany.perStayFee) || 0;
+    const _pp = parseFloat(pmCompany.pctFee) || 0;
+    const result = {};
+    ['conservative','base','aggressive'].forEach(key => {
+      const sc = projection.monthly[key];
+      if (!sc) return;
+      let rental = 0;
+      sc.slice(0,12).forEach(row => {
+        const on = row.occupiedNights || 0;
+        const ls = row.los || 1;
+        const st = ls > 0 ? on / ls : 0;
+        rental += row.revenue - (on * _pn + st * _ps + row.revenue * (_pp / 100));
+      });
+      result[key] = Math.round(rental);
+    });
+    return result;
+  }, [projection, pmCompany]);
   const updateA = (k,v) => setAssumptions(p=>({...p,[k]:v}));
 
   const clearFilters = () => {
@@ -3280,7 +3300,7 @@ function App({ authUser, onLogout, setAuthUser }) {
       )}
 
       {/* ─── Report ─── */}
-      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} lat={lat} lng={lng} />}
+      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} lat={lat} lng={lng} scenarioRentals={scenarioRentals} />}
 
       {/* ─── Profile ─── */}
       {view==='profile' && <ProfilePanel authUser={authUser} onLogout={onLogout} setAuthUser={setAuthUser} />}
