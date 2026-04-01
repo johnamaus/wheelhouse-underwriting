@@ -1477,7 +1477,7 @@ function AdminPanel() {
 }
 
 /* ═══════════════ REPORT PANEL ═══════════════ */
-function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality }) {
+function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality, lat, lng }) {
   const [heroImage, setHeroImage] = useState(null);
   const [reportBeds, setReportBeds] = useState(projection?.medBeds ? Math.round(projection.medBeds) : '');
   const [reportBaths, setReportBaths] = useState(projection?.medBaths ? Math.round(projection.medBaths) : '');
@@ -1599,6 +1599,8 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         selectedCompIds: [...reportComps],
         reportAccent,
         reportAccent2,
+        listingLat: parseFloat(lat),
+        listingLng: parseFloat(lng),
       };
       const result = await generateReport(projection, assumptions, comps, selectedComps, pmCompany, address, seasonality, reportExtras);
       setPreviewHtml(result.htmlContent);
@@ -1921,11 +1923,45 @@ function buildRangeChartSVG(title, monthlyData, formatter, color) {
     </svg>`;
 }
 
+const COMP_COLORS = ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6'];
+
+async function captureCompMap(listingLat, listingLng, reportCompList) {
+  if (!listingLat || !listingLng || !reportCompList.length) return null;
+  const mapDiv = document.createElement('div');
+  mapDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px;height:320px;z-index:-1;';
+  document.body.appendChild(mapDiv);
+  try {
+    const m = L.map(mapDiv, { zoomControl: false, attributionControl: false }).setView([listingLat, listingLng], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(m);
+    // Listing marker (dark ring)
+    const listIcon = L.divIcon({ html: '<div style="width:14px;height:14px;background:#3a3a3c;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>', iconSize: [14, 14], iconAnchor: [7, 7], className: '' });
+    L.marker([listingLat, listingLng], { icon: listIcon }).addTo(m);
+    // Comp markers (color-coded)
+    const bounds = L.latLngBounds([[listingLat, listingLng]]);
+    reportCompList.forEach((c, i) => {
+      if (!c.lat || !c.long) return;
+      const color = COMP_COLORS[i % COMP_COLORS.length];
+      const ci = L.divIcon({ html: `<div style="width:12px;height:12px;background:${color};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`, iconSize: [12, 12], iconAnchor: [6, 6], className: '' });
+      L.marker([c.lat, c.long], { icon: ci }).addTo(m);
+      bounds.extend([c.lat, c.long]);
+    });
+    m.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    // Wait for tiles to load
+    await new Promise(r => { m.whenReady(() => setTimeout(r, 1500)); });
+    const canvas = await html2canvas(mapDiv, { useCORS: true, allowTaint: true, scale: 2 });
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    m.remove();
+    return dataUrl;
+  } catch (e) { console.error('Map capture failed:', e); return null; }
+  finally { document.body.removeChild(mapDiv); }
+}
+
 async function generateReport(projection, assumptions, comps, selectedComps, pmCompany, propertyAddress, seasonality, extras) {
   const {
     heroImageData, reportBeds, reportBaths, companyName, companyLogoData, companyImageData,
     aboutTitle, companyDesc, highlights, agentName, agentImageData, agentEmail, agentPhone,
-    includeComps, selectedCompIds, reportAccent: _ra, reportAccent2: _ra2
+    includeComps, selectedCompIds, reportAccent: _ra, reportAccent2: _ra2,
+    listingLat, listingLng
   } = extras || {};
 
   const pm = pmCompany || {};
@@ -1991,6 +2027,12 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
   if (includeComps && selectedCompIds?.length > 0) {
     const idSet = new Set(selectedCompIds.map(String));
     reportCompList = comps.filter(c => idSet.has(String(c.listing_id || c.comp_id || c.id))).slice(0, 5);
+  }
+
+  // Capture map image for page 4
+  let mapImageData = null;
+  if (reportCompList.length > 0) {
+    mapImageData = await captureCompMap(listingLat, listingLng, reportCompList);
   }
 
   const dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
@@ -2129,12 +2171,14 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .charts-row > div { background: #fafafe; border-radius: 8px; padding: 10px 0 10px 0; border: 1px solid #eee; }
 
     /* ── PAGE 4: COMPS ── */
-    .p4-title { font-size: 21px; font-weight: 800; color: var(--text); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .comp-block { margin-bottom: 14px; }
-    .comp-block-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-    .comp-block-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dk); }
-    .comp-block-name { font-size: 11px; font-weight: 800; color: var(--text); }
-    .comp-block-meta { font-size: 9px; color: var(--text-sec); margin-left: auto; font-weight: 600; }
+    .p4-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .comp-map-container { width: 100%; height: 200px; border-radius: 8px; overflow: hidden; margin-bottom: 10px; border: 1px solid #e5e5ef; }
+    .comp-map-container img { width: 100%; height: 100%; object-fit: cover; }
+    .comp-block { margin-bottom: 6px; }
+    .comp-block-header { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    .comp-block-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .comp-block-name { font-size: 10px; font-weight: 800; color: var(--text); }
+    .comp-block-meta { font-size: 8px; color: var(--text-sec); margin-left: auto; font-weight: 600; }
     .data-table.comp thead th { background: var(--dk); }
 
     .disclaimer { font-size: 7px; color: #b0b0c0; line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5e5ef; }
@@ -2295,17 +2339,19 @@ ${includeComps && reportCompList.length > 0 ? `
   </div>
   <div class="pg-body">
     <div class="p4-title">Select Comparable Property Detail</div>
-    ${reportCompList.map(c => {
+    ${mapImageData ? `<div class="comp-map-container"><img src="${mapImageData}" alt="Comp Map"></div>` : ''}
+    ${reportCompList.map((c, idx) => {
       const compRevenue = c.nrevenue_365_0 || 0;
       const compOcc = c.occupancy_365_0 || 0;
       const compADR = c.anr_365_0 || 0;
+      const dotColor = COMP_COLORS[idx % COMP_COLORS.length];
       const monthlyRevEst = MONTHS.map((_, i) => Math.round(compRevenue * SEASON_REV[i] / 12));
       const monthlyOccEst = MONTHS.map((_, i) => (compOcc * 100 * SEASON_REV[i]).toFixed(1));
       const monthlyADREst = MONTHS.map((_, i) => Math.round(compADR * (0.85 + 0.3 * SEASON_REV[i])));
       return `
       <div class="comp-block">
         <div class="comp-block-header">
-          <div class="comp-block-dot"></div>
+          <div class="comp-block-dot" style="background:${dotColor}"></div>
           <div class="comp-block-name">${(c.title || 'Comp').substring(0, 50)} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
           <div class="comp-block-meta">Annual: ${fmtUSD(Math.round(compRevenue))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
         </div>
@@ -3222,7 +3268,7 @@ function App({ authUser, onLogout, setAuthUser }) {
       )}
 
       {/* ─── Report ─── */}
-      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} />}
+      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} lat={lat} lng={lng} />}
 
       {/* ─── Profile ─── */}
       {view==='profile' && <ProfilePanel authUser={authUser} onLogout={onLogout} setAuthUser={setAuthUser} />}
