@@ -513,11 +513,24 @@ const Stat = ({ label, value, sub, color }) => (
 );
 
 /* ─ Leaflet Map ─ */
-const CompMap = ({ comps, selected, onToggle, centerLat, centerLng, searchRadius }) => {
+const CompMap = ({ comps, selected, onToggle, centerLat, centerLng, searchRadius, pmCompany }) => {
   const mapRef = useRef(null);
   const mapInst = useRef(null);
   const markers = useRef([]);
-  const revs = comps.filter(c=>c.nrevenue_365_0!=null).map(c=>c.nrevenue_365_0);
+  const _mapPct = parseFloat((pmCompany||{}).pctFee) || 0;
+  const _mapPn = parseFloat((pmCompany||{}).perNightFee) || 0;
+  const _mapPs = parseFloat((pmCompany||{}).perStayFee) || 0;
+  const _mapHasFees = _mapPct > 0 || _mapPn > 0 || _mapPs > 0;
+  const _mapRentalRev = (comp) => {
+    const gross = comp.nrevenue_365_0 || 0;
+    if (!_mapHasFees) return gross;
+    const occ = comp.occupancy_365_0 || 0;
+    const los = comp.los_365_0 || 1;
+    const occNights = Math.round(365 * occ);
+    const stays = los > 0 ? occNights / los : 0;
+    return gross - (occNights * _mapPn + stays * _mapPs + gross * (_mapPct / 100));
+  };
+  const revs = comps.filter(c=>c.nrevenue_365_0!=null).map(c=> _mapRentalRev(c));
   const mn = revs.length ? Math.min(...revs) : 0;
   const mx = revs.length ? Math.max(...revs) : 1;
 
@@ -584,8 +597,8 @@ const CompMap = ({ comps, selected, onToggle, centerLat, centerLng, searchRadius
 
           <div class="popup-highlight">
             <div class="popup-highlight-row">
-              <span class="popup-highlight-label">Annual Revenue (365d)</span>
-              <span class="popup-highlight-value">${fmtUSD(comp.nrevenue_365_0)}</span>
+              <span class="popup-highlight-label">${_mapHasFees ? 'Annual Rental Revenue' : 'Annual Revenue (365d)'}</span>
+              <span class="popup-highlight-value">${fmtUSD(Math.round(_mapRentalRev(comp)))}</span>
             </div>
           </div>
 
@@ -650,10 +663,26 @@ const CompMap = ({ comps, selected, onToggle, centerLat, centerLng, searchRadius
 };
 
 /* ─ Comp Table ─ */
-const CompTable = ({ comps, selected, onToggle, visibleCols }) => {
+const CompTable = ({ comps, selected, onToggle, visibleCols, pmCompany }) => {
   const [sortKey, setSortKey] = useState('nrevenue_365_0');
   const [sortDir, setSortDir] = useState(-1);
-  const sorted = useMemo(()=>[...comps].sort((a,b)=>((a[sortKey]??-Infinity)-(b[sortKey]??-Infinity))*sortDir),[comps,sortKey,sortDir]);
+  const _pctFee = parseFloat((pmCompany||{}).pctFee) || 0;
+  const _pnFee = parseFloat((pmCompany||{}).perNightFee) || 0;
+  const _psFee = parseFloat((pmCompany||{}).perStayFee) || 0;
+  const hasFees = _pctFee > 0 || _pnFee > 0 || _psFee > 0;
+  const rentalRev = useCallback((comp) => {
+    const gross = comp.nrevenue_365_0 || 0;
+    if (!hasFees) return gross;
+    const occ = comp.occupancy_365_0 || 0;
+    const los = comp.los_365_0 || 1;
+    const occNights = Math.round(365 * occ);
+    const stays = los > 0 ? occNights / los : 0;
+    return gross - (occNights * _pnFee + stays * _psFee + gross * (_pctFee / 100));
+  }, [_pctFee, _pnFee, _psFee, hasFees]);
+  const sorted = useMemo(()=>[...comps].sort((a,b)=>{
+    if (sortKey === 'nrevenue_365_0' && hasFees) return (rentalRev(a) - rentalRev(b)) * sortDir;
+    return ((a[sortKey]??-Infinity)-(b[sortKey]??-Infinity))*sortDir;
+  }),[comps,sortKey,sortDir,rentalRev,hasFees]);
   const cols = ALL_COLUMNS.filter(c=>c.always||visibleCols.has(c.key));
 
   const th = { padding:'8px 8px', textAlign:'left', fontSize:11, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--text-muted)', cursor:'pointer', userSelect:'none', borderBottom:'2px solid var(--border)', whiteSpace:'nowrap', fontWeight:600, background:'var(--surface)' };
@@ -669,6 +698,7 @@ const CompTable = ({ comps, selected, onToggle, visibleCols }) => {
         </div>
       </div>
     );
+    if(col.key==='nrevenue_365_0' && hasFees) return fmtUSD(Math.round(rentalRev(comp)));
     const v = comp[col.key];
     if(col.fmt) return col.fmt(v);
     if(col.key==='star_rating') return v!=null ? v.toFixed(1) : '—';
@@ -681,7 +711,7 @@ const CompTable = ({ comps, selected, onToggle, visibleCols }) => {
         <thead style={{ position:'sticky', top:0, zIndex:2 }}>
           <tr>
             <th style={{...th, width:36}}><input type="checkbox" checked={comps.length>0&&comps.every(c=>selected.has(c.listing_id))} onChange={()=>{comps.every(c=>selected.has(c.listing_id))?onToggle('__none'):onToggle('__all')}} style={{accentColor:'var(--accent)'}}/></th>
-            {cols.map(c=><th key={c.key} style={{...th,width:c.w}} onClick={()=>{if(sortKey===c.key)setSortDir(d=>d*-1);else{setSortKey(c.key);setSortDir(-1);}}}>{c.label}{sortKey===c.key?(sortDir===1?' ↑':' ↓'):''}</th>)}
+            {cols.map(c=><th key={c.key} style={{...th,width:c.w}} onClick={()=>{if(sortKey===c.key)setSortDir(d=>d*-1);else{setSortKey(c.key);setSortDir(-1);}}}>{c.key==='nrevenue_365_0'&&hasFees?'Rental Revenue':c.label}{sortKey===c.key?(sortDir===1?' ↑':' ↓'):''}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -1832,7 +1862,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
                   <label key={id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background: isChecked?'var(--accent-bg)':'var(--surface2)',border:'1px solid '+(isChecked?'var(--accent-light)':'var(--border)'),borderRadius:8,cursor:'pointer',fontSize:13}}>
                     <input type="checkbox" checked={isChecked} onChange={()=>toggleComp(id)} disabled={!isChecked && reportComps.size >= 5} style={{accentColor:'var(--accent)'}} />
                     <span style={{fontWeight:500,flex:1}}>{c.title || 'Comp'}</span>
-                    <span style={{color:'var(--text-muted)',fontSize:12}}>{c.bedrooms}BR · ${Math.round((c.nrevenue_365_0||0) * (1 - (parseFloat((pmCompany||{}).pctFee)||0)/100)).toLocaleString()}/yr</span>
+                    <span style={{color:'var(--text-muted)',fontSize:12}}>{c.bedrooms}BR · ${(() => { const g=c.nrevenue_365_0||0; const occ=c.occupancy_365_0||0; const los=c.los_365_0||1; const on=Math.round(365*occ); const st=los>0?on/los:0; const pn=parseFloat((pmCompany||{}).perNightFee)||0; const ps=parseFloat((pmCompany||{}).perStayFee)||0; const pp=parseFloat((pmCompany||{}).pctFee)||0; return Math.round(g-(on*pn+st*ps+g*(pp/100))); })().toLocaleString()}/yr</span>
                   </label>
                 );
               })}
@@ -2879,7 +2909,7 @@ function App({ authUser, onLogout, setAuthUser }) {
                 </div>
               </div>
               <div style={{position:'relative'}}>
-                <CompMap comps={filteredComps} selected={selected} onToggle={toggleComp} centerLat={parseFloat(lat)} centerLng={parseFloat(lng)} searchRadius={parseInt(radius)||5000} />
+                <CompMap comps={filteredComps} selected={selected} onToggle={toggleComp} centerLat={parseFloat(lat)} centerLng={parseFloat(lng)} searchRadius={parseInt(radius)||5000} pmCompany={pmCompany} />
                 {/* Widgets overlay */}
                 {showWidgets && (
                   <div style={{position:'absolute',top:10,right:10,zIndex:1000}}>
@@ -2898,7 +2928,7 @@ function App({ authUser, onLogout, setAuthUser }) {
                   <button onClick={()=>toggleComp('__none')} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'4px 10px',fontSize:12,cursor:'pointer',color:'var(--text-sec)'}}>Clear</button>
                 </div>
               </div>
-              <CompTable comps={filteredComps} selected={selected} onToggle={toggleComp} visibleCols={visibleCols} />
+              <CompTable comps={filteredComps} selected={selected} onToggle={toggleComp} visibleCols={visibleCols} pmCompany={pmCompany} />
             </div>
           </div>
 
