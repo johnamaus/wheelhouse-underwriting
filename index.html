@@ -1137,9 +1137,8 @@ ${type === 'full-report' ? `
   tempDiv.style.left = '-9999px';
   tempDiv.style.top = '0';
   tempDiv.style.width = '8.5in';
-  // Remove dashed page break borders for PDF
-  const pdfHtml = htmlContent.replace('.page + .page { border-top: 3px dashed #ccc; }', '.page + .page { border-top: none; }');
-  tempDiv.innerHTML = pdfHtml;
+  tempDiv.innerHTML = htmlContent;
+  tempDiv.classList.add('pdf-mode');
   document.body.appendChild(tempDiv);
 
   const filename = extras?.reportName || 'revenue_projection';
@@ -2005,9 +2004,10 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', -apple-system, sans-serif; color: #1a1a2e; background: #fff; width: 8.5in; margin: 0 auto; -webkit-font-smoothing: antialiased; }
-    .page { width: 8.5in; min-height: 11in; max-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; }
+    .page { width: 8.5in; min-height: 11in; max-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; display: flex; flex-direction: column; }
     .page:last-child { page-break-after: avoid; }
     .page + .page { border-top: 3px dashed #ccc; }
+    .pdf-mode .page + .page { border-top: none !important; }
     @media print { .page + .page { border-top: none; } }
 
     /* ── COLOR TOKENS ── */
@@ -2056,7 +2056,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     .pg-header-title-area { text-align: right; }
     .pg-header-title { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: 0.04em; text-transform: uppercase; }
     .pg-header-sub { font-size: 9px; color: var(--text-sec); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
-    .pg-body { padding: 0 40px 20px; }
+    .pg-body { padding: 0 40px 50px; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
     .pg-powered-by { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 40px 4px; position: absolute; bottom: 36px; left: 0; right: 0; }
     .pg-powered-by img { height: 16px; width: auto; }
     .pg-powered-by span { font-size: 8px; color: var(--text-sec); font-weight: 500; }
@@ -2271,7 +2271,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     </div>
   </div>
   <div class="pg-powered-by">
-    <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2L4 8v16l12 6 12-6V8L16 2z" fill="#7c3aed"/><path d="M10 14l3 8 3-6 3 6 3-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <img src="https://www.usewheelhouse.com/svg/wheelhouse-logo.svg" alt="Wheelhouse" style="height:18px;width:auto;">
     <span>Powered by Wheelhouse</span>
   </div>
   <div class="pg-disclaimer-bar">*This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only. Revenue is not guaranteed.</div>
@@ -2317,7 +2317,7 @@ ${includeComps && reportCompList.length > 0 ? `
     }).join('')}
   </div>
   <div class="pg-powered-by">
-    <svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2L4 8v16l12 6 12-6V8L16 2z" fill="#7c3aed"/><path d="M10 14l3 8 3-6 3 6 3-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <img src="https://www.usewheelhouse.com/svg/wheelhouse-logo.svg" alt="Wheelhouse" style="height:18px;width:auto;">
     <span>Powered by Wheelhouse</span>
   </div>
   <div class="pg-disclaimer-bar">*This document is for projection purposes only. Revenue projections represent potential when property is fully available. These figures are base rental only. Revenue is not guaranteed.</div>
