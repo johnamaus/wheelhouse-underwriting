@@ -1484,6 +1484,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const [companyName, setCompanyName] = useState(pmCompany?.name || '');
   const [companyLogo, setCompanyLogo] = useState(null);
   const [companyImage, setCompanyImage] = useState(null);
+  const [aboutTitle, setAboutTitle] = useState('About Us');
   const [companyDesc, setCompanyDesc] = useState('');
   const [highlight1, setHighlight1] = useState('');
   const [highlight2, setHighlight2] = useState('');
@@ -1512,7 +1513,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const savePmTemplate = () => {
     const name = pmTplName.trim();
     if (!name) return;
-    const updated = { ...pmTemplates, [name]: { companyName, companyLogo, companyImage, companyDesc, highlight1, highlight2, highlight3 } };
+    const updated = { ...pmTemplates, [name]: { companyName, companyLogo, companyImage, aboutTitle, companyDesc, highlight1, highlight2, highlight3 } };
     setPmTemplates(updated);
     localStorage.setItem('wh_pm_templates', JSON.stringify(updated));
     setPmTplName(''); setShowSavePm(false);
@@ -1521,7 +1522,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
     const t = pmTemplates[name]; if (!t) return;
     setActivePmTpl(name); setShowPmSelect(false);
     setCompanyName(t.companyName || ''); setCompanyLogo(t.companyLogo || null);
-    setCompanyImage(t.companyImage || null); setCompanyDesc(t.companyDesc || '');
+    setCompanyImage(t.companyImage || null); setAboutTitle(t.aboutTitle || 'About Us'); setCompanyDesc(t.companyDesc || '');
     setHighlight1(t.highlight1 || ''); setHighlight2(t.highlight2 || ''); setHighlight3(t.highlight3 || '');
   };
   const deletePmTemplate = (name) => {
@@ -1587,6 +1588,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         companyName,
         companyLogoData: companyLogo,
         companyImageData: companyImage,
+        aboutTitle,
         companyDesc,
         highlights: [highlight1, highlight2, highlight3].filter(Boolean),
         agentName,
@@ -1736,7 +1738,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
             {companyImage && <img src={companyImage} style={{marginTop:8,maxHeight:100,borderRadius:8,objectFit:'cover',width:'100%'}} alt="Banner preview" />}
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelStyle}>About Us</label>
+            <input value={aboutTitle} onChange={e=>setAboutTitle(e.target.value)} placeholder="Section title (e.g. About Us)" style={{...inputStyle,fontWeight:700,marginBottom:6}} />
             <textarea value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} rows={3} placeholder="Brief description of your company..." style={{...inputStyle,resize:'vertical'}} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
@@ -1922,7 +1924,7 @@ function buildRangeChartSVG(title, monthlyData, formatter, color) {
 async function generateReport(projection, assumptions, comps, selectedComps, pmCompany, propertyAddress, seasonality, extras) {
   const {
     heroImageData, reportBeds, reportBaths, companyName, companyLogoData, companyImageData,
-    companyDesc, highlights, agentName, agentImageData, agentEmail, agentPhone,
+    aboutTitle, companyDesc, highlights, agentName, agentImageData, agentEmail, agentPhone,
     includeComps, selectedCompIds, reportAccent: _ra, reportAccent2: _ra2
   } = extras || {};
 
@@ -2202,7 +2204,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
   <div class="p2-spacer"></div>
   <div class="p2-content">
     <div class="p2-about">
-      <div class="p2-about-title">About Us</div>
+      <div class="p2-about-title">${aboutTitle || 'About Us'}</div>
       <div class="p2-about-divider"></div>
       <div class="p2-about-text">${companyDesc || 'Professional property management services tailored for success. Our experienced local team handles everything from dynamic pricing and guest communication to cleaning, maintenance, and revenue optimization.'}</div>
     </div>
