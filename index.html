@@ -1588,6 +1588,34 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
     setAgentTemplates(updated); localStorage.setItem('wh_agent_templates', JSON.stringify(updated));
   };
 
+  // Property Image Templates
+  const [propImgTemplates, setPropImgTemplates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wh_propimg_templates') || '{}'); } catch { return {}; }
+  });
+  const [propImgTplName, setPropImgTplName] = useState('');
+  const [showSavePropImg, setShowSavePropImg] = useState(false);
+  const [activePropImgTpl, setActivePropImgTpl] = useState('');
+  const [showPropImgSelect, setShowPropImgSelect] = useState(false);
+
+  const savePropImgTemplate = () => {
+    const name = propImgTplName.trim();
+    if (!name || !heroImage) return;
+    const updated = { ...propImgTemplates, [name]: { heroImage } };
+    setPropImgTemplates(updated);
+    localStorage.setItem('wh_propimg_templates', JSON.stringify(updated));
+    setPropImgTplName(''); setShowSavePropImg(false);
+  };
+  const loadPropImgTemplate = (name) => {
+    const t = propImgTemplates[name]; if (!t) return;
+    setActivePropImgTpl(name); setShowPropImgSelect(false);
+    setHeroImage(t.heroImage || null);
+  };
+  const deletePropImgTemplate = (name) => {
+    const updated = { ...propImgTemplates }; delete updated[name];
+    setPropImgTemplates(updated); localStorage.setItem('wh_propimg_templates', JSON.stringify(updated));
+    if (activePropImgTpl === name) setActivePropImgTpl('');
+  };
+
   // Sync PM name if changed
   useEffect(() => { if (pmCompany?.name && !companyName) setCompanyName(pmCompany.name); }, [pmCompany?.name]);
 
@@ -1649,7 +1677,11 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   };
 
   const inputStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%' };
+  const emptyInputStyle = { ...inputStyle, border:'1.5px dashed var(--text-muted)', background:'var(--surface2)' };
+  const inputFor = (val) => val ? inputStyle : emptyInputStyle;
   const labelStyle = { fontSize:12, color:'var(--text-sec)', fontWeight:500, display:'block', marginBottom:4 };
+  const emptyLabelStyle = { ...labelStyle, color:'var(--yellow)' };
+  const labelFor = (val) => val ? labelStyle : emptyLabelStyle;
   const sectionStyle = { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:24, marginBottom:16 };
 
   const hasProjection = projection && projection.medRevenue > 0;
@@ -1692,24 +1724,57 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
 
       {/* Property Details */}
       <div style={sectionStyle}>
-        <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Property Details</h3>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:8}}>
+          <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Property Details</h3>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap',position:'relative'}}>
+            {activePropImgTpl ? (
+              <React.Fragment>
+                <span style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600}}>{activePropImgTpl}</span>
+                <button onClick={()=>{setActivePropImgTpl('');setHeroImage(null);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Clear template">&times;</button>
+              </React.Fragment>
+            ) : Object.keys(propImgTemplates).length > 0 ? (
+              <div style={{position:'relative'}}>
+                <button onClick={()=>setShowPropImgSelect(!showPropImgSelect)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Select Image</button>
+                {showPropImgSelect && (
+                  <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:10,minWidth:160,padding:4}}>
+                    {Object.keys(propImgTemplates).map(name => (
+                      <div key={name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'6px 8px',borderRadius:4}}>
+                        <button onClick={()=>loadPropImgTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
+                        <button onClick={(e)=>{e.stopPropagation();deletePropImgTemplate(name);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Delete">&times;</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+            {!activePropImgTpl && (showSavePropImg ? (
+              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                <input value={propImgTplName} onChange={e=>setPropImgTplName(e.target.value)} placeholder="Image name" onKeyDown={e=>e.key==='Enter'&&savePropImgTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
+                <button onClick={savePropImgTemplate} disabled={!propImgTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
+                <button onClick={()=>setShowSavePropImg(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
+              </div>
+            ) : heroImage ? (
+              <button onClick={()=>setShowSavePropImg(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save Image</button>
+            ) : null)}
+          </div>
+        </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
           <div style={{gridColumn:'1/-1'}}>
             <label style={labelStyle}>Listing Address</label>
             <input value={address || ''} disabled style={{...inputStyle,background:'var(--surface2)',color:'var(--text-muted)'}} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelStyle}>Listing Hero Image</label>
+            <label style={labelFor(heroImage)}>Property Image {!heroImage && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
             <input type="file" accept="image/*" onChange={handleFileUpload(setHeroImage)} style={{fontSize:13}} />
             {heroImage && <img src={heroImage} style={{marginTop:8,maxHeight:120,borderRadius:8,objectFit:'cover'}} alt="Hero preview" />}
           </div>
           <div>
-            <label style={labelStyle}>Bedrooms</label>
-            <input type="number" value={reportBeds} onChange={e=>setReportBeds(e.target.value)} placeholder="e.g. 3" style={inputStyle} />
+            <label style={labelFor(reportBeds)}>Bedrooms {!reportBeds && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input type="number" value={reportBeds} onChange={e=>setReportBeds(e.target.value)} placeholder="e.g. 3" style={inputFor(reportBeds)} />
           </div>
           <div>
-            <label style={labelStyle}>Bathrooms</label>
-            <input type="number" value={reportBaths} onChange={e=>setReportBaths(e.target.value)} placeholder="e.g. 2" style={inputStyle} />
+            <label style={labelFor(reportBaths)}>Bathrooms {!reportBaths && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input type="number" value={reportBaths} onChange={e=>setReportBaths(e.target.value)} placeholder="e.g. 2" style={inputFor(reportBaths)} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
             <label style={labelStyle}>Annual Rental Revenue Range</label>
@@ -1756,29 +1821,29 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
           <div>
-            <label style={labelStyle}>Company Name</label>
-            <input value={companyName} onChange={e=>setCompanyName(e.target.value)} placeholder="e.g. Wheelhouse" style={inputStyle} />
+            <label style={labelFor(companyName)}>Company Name {!companyName && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input value={companyName} onChange={e=>setCompanyName(e.target.value)} placeholder="e.g. Wheelhouse" style={inputFor(companyName)} />
           </div>
           <div>
-            <label style={labelStyle}>Company Logo</label>
+            <label style={labelFor(companyLogo)}>Company Logo {!companyLogo && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
             <input type="file" accept="image/*" onChange={handleFileUpload(setCompanyLogo)} style={{fontSize:13}} />
             {companyLogo && <img src={companyLogo} style={{marginTop:8,maxHeight:40}} alt="Logo preview" />}
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelStyle}>Company Banner Image</label>
+            <label style={labelFor(companyImage)}>Company Banner Image {!companyImage && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
             <input type="file" accept="image/*" onChange={handleFileUpload(setCompanyImage)} style={{fontSize:13}} />
             {companyImage && <img src={companyImage} style={{marginTop:8,maxHeight:100,borderRadius:8,objectFit:'cover',width:'100%'}} alt="Banner preview" />}
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <input value={aboutTitle} onChange={e=>setAboutTitle(e.target.value)} placeholder="Section title (e.g. About Us)" style={{...inputStyle,fontWeight:700,marginBottom:6}} />
-            <textarea value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} rows={3} placeholder="Brief description of your company..." style={{...inputStyle,resize:'vertical'}} />
+            <input value={aboutTitle} onChange={e=>setAboutTitle(e.target.value)} placeholder="Section title (e.g. About Us)" style={{...inputFor(aboutTitle),fontWeight:700,marginBottom:6}} />
+            <textarea value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} rows={3} placeholder="Brief description of your company..." style={{...inputFor(companyDesc),resize:'vertical'}} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelStyle}>Highlights / Points of Differentiation</label>
+            <label style={labelFor(highlight1&&highlight2&&highlight3)}>Highlights / Points of Differentiation {!(highlight1&&highlight2&&highlight3) && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              <input value={highlight1} onChange={e=>setHighlight1(e.target.value)} placeholder="Highlight 1" style={inputStyle} />
-              <input value={highlight2} onChange={e=>setHighlight2(e.target.value)} placeholder="Highlight 2" style={inputStyle} />
-              <input value={highlight3} onChange={e=>setHighlight3(e.target.value)} placeholder="Highlight 3" style={inputStyle} />
+              <input value={highlight1} onChange={e=>setHighlight1(e.target.value)} placeholder="Highlight 1" style={inputFor(highlight1)} />
+              <input value={highlight2} onChange={e=>setHighlight2(e.target.value)} placeholder="Highlight 2" style={inputFor(highlight2)} />
+              <input value={highlight3} onChange={e=>setHighlight3(e.target.value)} placeholder="Highlight 3" style={inputFor(highlight3)} />
             </div>
           </div>
         </div>
@@ -1822,21 +1887,21 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
           <div>
-            <label style={labelStyle}>Agent Name</label>
-            <input value={agentName} onChange={e=>setAgentName(e.target.value)} placeholder="e.g. Jane Doe" style={inputStyle} />
+            <label style={labelFor(agentName)}>Agent Name {!agentName && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input value={agentName} onChange={e=>setAgentName(e.target.value)} placeholder="e.g. Jane Doe" style={inputFor(agentName)} />
           </div>
           <div>
-            <label style={labelStyle}>Agent Photo</label>
+            <label style={labelFor(agentImage)}>Agent Photo {!agentImage && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
             <input type="file" accept="image/*" onChange={handleFileUpload(setAgentImage)} style={{fontSize:13}} />
             {agentImage && <img src={agentImage} style={{marginTop:8,height:50,width:50,borderRadius:'50%',objectFit:'cover'}} alt="Agent preview" />}
           </div>
           <div>
-            <label style={labelStyle}>Email</label>
-            <input type="email" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)} placeholder="agent@company.com" style={inputStyle} />
+            <label style={labelFor(agentEmail)}>Email {!agentEmail && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input type="email" value={agentEmail} onChange={e=>setAgentEmail(e.target.value)} placeholder="agent@company.com" style={inputFor(agentEmail)} />
           </div>
           <div>
-            <label style={labelStyle}>Phone</label>
-            <input type="tel" value={agentPhone} onChange={e=>setAgentPhone(e.target.value)} placeholder="(555) 123-4567" style={inputStyle} />
+            <label style={labelFor(agentPhone)}>Phone {!agentPhone && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input type="tel" value={agentPhone} onChange={e=>setAgentPhone(e.target.value)} placeholder="(555) 123-4567" style={inputFor(agentPhone)} />
           </div>
         </div>
       </div>
