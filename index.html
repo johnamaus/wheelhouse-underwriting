@@ -2011,8 +2011,6 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     body { font-family: 'Inter', -apple-system, sans-serif; color: #1a1a2e; background: #fff; width: 8.5in; margin: 0 auto; -webkit-font-smoothing: antialiased; }
     .page { width: 8.5in; min-height: 11in; max-height: 11in; page-break-after: always; overflow: hidden; position: relative; background: #fff; display: flex; flex-direction: column; }
     .page:last-child { page-break-after: avoid; }
-    .page + .page { border-top: 3px dashed #ccc; }
-    .pdf-mode .page + .page { border-top: none !important; }
     @media print { .page + .page { border-top: none; } }
 
     /* ── COLOR TOKENS ── */
