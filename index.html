@@ -1138,8 +1138,13 @@ ${type === 'full-report' ? `
   tempDiv.style.top = '0';
   tempDiv.style.width = '8.5in';
   tempDiv.innerHTML = htmlContent;
-  tempDiv.classList.add('pdf-mode');
   document.body.appendChild(tempDiv);
+
+  // Force remove dashed page break borders for PDF
+  tempDiv.querySelectorAll('.page').forEach(p => {
+    p.style.setProperty('border-top', 'none', 'important');
+    p.style.setProperty('border-bottom', 'none', 'important');
+  });
 
   const filename = extras?.reportName || 'revenue_projection';
   const safeFilename = (filename || 'report').replace(/[^a-zA-Z0-9]/g, '_');
