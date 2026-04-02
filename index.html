@@ -2865,8 +2865,8 @@ function App({ authUser, onLogout, setAuthUser }) {
         </div>
         <div style={{ display:'flex', gap:4, background:'var(--surface)', borderRadius:10, padding:3, border:'1px solid var(--border)' }}>
           <TabBtn label="Search" active={view==='search'} onClick={()=>setView('search')} />
-          <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
           <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
+          <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="Report" active={view==='report'} onClick={()=>setView('report')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
@@ -2948,6 +2948,83 @@ function App({ authUser, onLogout, setAuthUser }) {
           <button onClick={handleSearch} disabled={loading||!integrationKey||!userKey} style={{width:'100%',padding:12,background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:loading||!integrationKey||!userKey?'not-allowed':'pointer',opacity:loading||!integrationKey||!userKey?0.5:1}}>
             {loading?'Searching...':'Search this area'}
           </button>
+
+          {/* PM Fee Structure (inline in search tab) */}
+          <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:20}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700}}>PM Fee Structure</div>
+                <div style={{fontSize:11,color:'var(--text-muted)'}}>Set fees before pulling comps to see rental revenue</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                {Object.keys(feeTemplates).length > 0 && (
+                  <div style={{position:'relative'}}>
+                    <button onClick={()=>setShowFeeSelect(!showFeeSelect)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>
+                      {activeFeeTemplate ? activeFeeTemplate : 'Load Template'}
+                    </button>
+                    {showFeeSelect && (
+                      <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:10,minWidth:200,padding:4}}>
+                        {Object.keys(feeTemplates).map(name => {
+                          const t = feeTemplates[name];
+                          const desc = [t.perStayFee&&`$${t.perStayFee}/stay`, t.perNightFee&&`$${t.perNightFee}/night`, t.pctFee&&`${t.pctFee}%`].filter(Boolean).join(' + ');
+                          return (
+                            <div key={name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'6px 8px',borderRadius:4}}>
+                              <button onClick={()=>loadFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>
+                                <div>{name}</div>
+                                <div style={{fontSize:10,color:'var(--text-muted)'}}>{desc}</div>
+                              </button>
+                              <button onClick={(e)=>{e.stopPropagation();deleteFeeTemplate(name);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Delete">&times;</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:12}}>
+              <div>
+                <label style={{fontSize:11,color:'var(--text-muted)'}}>Per Stay Fee</label>
+                <div style={{position:'relative',marginTop:4}}>
+                  <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:14}}>$</span>
+                  <input type="number" step="0.01" value={pmCompany.perStayFee} onChange={e=>updatePM('perStayFee',e.target.value)} placeholder="e.g. 150" style={{...inputStyle,paddingLeft:24}} />
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'var(--text-muted)'}}>Per Night Fee</label>
+                <div style={{position:'relative',marginTop:4}}>
+                  <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:14}}>$</span>
+                  <input type="number" step="0.01" value={pmCompany.perNightFee} onChange={e=>updatePM('perNightFee',e.target.value)} placeholder="e.g. 25" style={{...inputStyle,paddingLeft:24}} />
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:'var(--text-muted)'}}>% Fee</label>
+                <div style={{position:'relative',marginTop:4}}>
+                  <input type="number" step="0.1" value={pmCompany.pctFee} onChange={e=>updatePM('pctFee',e.target.value)} placeholder="e.g. 20" style={{...inputStyle,paddingRight:28}} />
+                  <span style={{position:'absolute',right:10,top:9,color:'var(--text-muted)',fontSize:14}}>%</span>
+                </div>
+              </div>
+            </div>
+
+            {(pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee) && (
+              <div style={{background:'var(--accent-bg)',border:'1px solid var(--accent-light)',borderRadius:8,padding:'8px 12px',marginBottom:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontSize:12,color:'var(--text)'}}>
+                  {[pmCompany.perStayFee && `$${pmCompany.perStayFee}/stay`, pmCompany.perNightFee && `$${pmCompany.perNightFee}/night`, pmCompany.pctFee && `${pmCompany.pctFee}% of revenue`].filter(Boolean).join(' + ')}
+                </div>
+                {!showSaveFee ? (
+                  <button onClick={()=>setShowSaveFee(true)} style={{background:'none',border:'1px solid var(--accent-light)',borderRadius:5,padding:'2px 8px',fontSize:10,fontWeight:600,cursor:'pointer',color:'var(--accent)'}}>Save</button>
+                ) : (
+                  <div style={{display:'flex',alignItems:'center',gap:4}}>
+                    <input value={feeTplName} onChange={e=>setFeeTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&saveFeeTemplate()} style={{...inputStyle,width:120,padding:'3px 8px',fontSize:11}} />
+                    <button onClick={saveFeeTemplate} disabled={!feeTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'3px 8px',fontSize:10,fontWeight:600,cursor:'pointer'}}>Save</button>
+                    <button onClick={()=>{setShowSaveFee(false);setFeeTplName('');}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:11}}>✕</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
