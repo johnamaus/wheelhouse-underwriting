@@ -2866,7 +2866,6 @@ function App({ authUser, onLogout, setAuthUser }) {
         <div style={{ display:'flex', gap:4, background:'var(--surface)', borderRadius:10, padding:3, border:'1px solid var(--border)' }}>
           <TabBtn label="Search" active={view==='search'} onClick={()=>setView('search')} />
           <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
-          <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="Report" active={view==='report'} onClick={()=>setView('report')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
@@ -2945,12 +2944,8 @@ function App({ authUser, onLogout, setAuthUser }) {
             </div>
           )}
 
-          <button onClick={handleSearch} disabled={loading||!integrationKey||!userKey} style={{width:'100%',padding:12,background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:loading||!integrationKey||!userKey?'not-allowed':'pointer',opacity:loading||!integrationKey||!userKey?0.5:1}}>
-            {loading?'Searching...':'Search this area'}
-          </button>
-
           {/* PM Fee Structure (inline in search tab) */}
-          <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:20}}>
+          <div style={{marginTop:4,borderTop:'1px solid var(--border)',paddingTop:16,marginBottom:16}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div>
                 <div style={{fontSize:14,fontWeight:700}}>PM Fee Structure</div>
@@ -3025,6 +3020,10 @@ function App({ authUser, onLogout, setAuthUser }) {
               </div>
             )}
           </div>
+
+          <button onClick={handleSearch} disabled={loading||!integrationKey||!userKey} style={{width:'100%',padding:12,background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:loading||!integrationKey||!userKey?'not-allowed':'pointer',opacity:loading||!integrationKey||!userKey?0.5:1}}>
+            {loading?'Searching...':'Search this area'}
+          </button>
         </div>
       )}
 
@@ -3048,8 +3047,8 @@ function App({ authUser, onLogout, setAuthUser }) {
                   <button onClick={()=>setShowWidgets(!showWidgets)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:12,cursor:'pointer',color:'var(--text-sec)',fontWeight:500}}>
                     ⚙ Widgets
                   </button>
-                  <button onClick={()=>setView('pm')} style={{background:'var(--accent)',border:'none',borderRadius:6,padding:'5px 14px',fontSize:12,cursor:'pointer',color:'#fff',fontWeight:600}}>
-                    PM Setup & Projection →
+                  <button onClick={()=>setView('projection')} style={{background:'var(--accent)',border:'none',borderRadius:6,padding:'5px 14px',fontSize:12,cursor:'pointer',color:'#fff',fontWeight:600}}>
+                    View Projection →
                   </button>
                 </div>
               </div>
@@ -3084,114 +3083,14 @@ function App({ authUser, onLogout, setAuthUser }) {
         </div>
       )}
 
-      {/* ════ PM SETUP ════ */}
-      {view==='pm'&&(
-        <div style={{maxWidth:600,margin:'0 auto'}}>
-          <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:24}}>
-            <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Property Management Company</div>
-            <div style={{fontSize:12,color:'var(--text-muted)',marginBottom:12}}>Enter the PM fee structure.</div>
-
-            <div style={{fontSize:13,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:12}}>Fee Structure</div>
-
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14,marginBottom:20}}>
-              <div>
-                <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Per Stay Fee</label>
-                <div style={{position:'relative'}}>
-                  <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:14}}>$</span>
-                  <input type="number" step="0.01" value={pmCompany.perStayFee} onChange={e=>updatePM('perStayFee',e.target.value)} placeholder="e.g. 150" style={{...inputStyle,paddingLeft:24}} />
-                </div>
-                <div style={{fontSize:10,color:'var(--text-muted)',marginTop:3}}>Cleaning fee, etc.</div>
-              </div>
-              <div>
-                <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>Per Night Fee</label>
-                <div style={{position:'relative'}}>
-                  <span style={{position:'absolute',left:10,top:9,color:'var(--text-muted)',fontSize:14}}>$</span>
-                  <input type="number" step="0.01" value={pmCompany.perNightFee} onChange={e=>updatePM('perNightFee',e.target.value)} placeholder="e.g. 25" style={{...inputStyle,paddingLeft:24}} />
-                </div>
-                <div style={{fontSize:10,color:'var(--text-muted)',marginTop:3}}>Nightly surcharge</div>
-              </div>
-              <div>
-                <label style={{fontSize:12,color:'var(--text-sec)',fontWeight:500,display:'block',marginBottom:4}}>% Fee</label>
-                <div style={{position:'relative'}}>
-                  <input type="number" step="0.1" value={pmCompany.pctFee} onChange={e=>updatePM('pctFee',e.target.value)} placeholder="e.g. 20" style={{...inputStyle,paddingRight:28}} />
-                  <span style={{position:'absolute',right:10,top:9,color:'var(--text-muted)',fontSize:14}}>%</span>
-                </div>
-                <div style={{fontSize:10,color:'var(--text-muted)',marginTop:3}}>% of gross revenue</div>
-              </div>
-            </div>
-
-            {/* Summary preview */}
-            {(pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee) && (
-              <div style={{background:'var(--accent-bg)',border:'1px solid var(--accent-light)',borderRadius:10,padding:14,marginBottom:16}}>
-                <div style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:6}}>Fee Summary</div>
-                <div style={{fontSize:13,color:'var(--text)'}}>
-                  {pmCompany.name && <span style={{fontWeight:600}}>{pmCompany.name}: </span>}
-                  {[
-                    pmCompany.perStayFee && `$${pmCompany.perStayFee}/stay`,
-                    pmCompany.perNightFee && `$${pmCompany.perNightFee}/night`,
-                    pmCompany.pctFee && `${pmCompany.pctFee}% of revenue`,
-                  ].filter(Boolean).join(' + ') || 'No fees entered'}
-                </div>
-              </div>
-            )}
-
-            {/* Fee template save/load */}
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-              {Object.keys(feeTemplates).length > 0 && !showFeeSelect && !showSaveFee && (
-                <button onClick={()=>setShowFeeSelect(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
-                  {activeFeeTemplate ? `Template: ${activeFeeTemplate}` : 'Load Fee Template'}
-                </button>
-              )}
-              {!showSaveFee && !showFeeSelect && (pmCompany.perStayFee || pmCompany.perNightFee || pmCompany.pctFee) && (
-                <button onClick={()=>setShowSaveFee(true)} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-                  Save as Template
-                </button>
-              )}
-              {showFeeSelect && (
-                <div style={{width:'100%',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:10,padding:12}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'var(--text-sec)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:8}}>Saved Fee Templates</div>
-                  {Object.keys(feeTemplates).map(name => {
-                    const t = feeTemplates[name];
-                    const desc = [t.perStayFee&&`$${t.perStayFee}/stay`, t.perNightFee&&`$${t.perNightFee}/night`, t.pctFee&&`${t.pctFee}%`].filter(Boolean).join(' + ');
-                    return (
-                      <div key={name} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--border-light)'}}>
-                        <button onClick={()=>loadFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:13,fontWeight:600,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
-                        <span style={{fontSize:11,color:'var(--text-muted)'}}>{desc}</span>
-                        <button onClick={()=>deleteFeeTemplate(name)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:12,padding:'2px 6px'}}>✕</button>
-                      </div>
-                    );
-                  })}
-                  <button onClick={()=>setShowFeeSelect(false)} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:12,cursor:'pointer',marginTop:8}}>Cancel</button>
-                </div>
-              )}
-              {showSaveFee && (
-                <div style={{display:'flex',alignItems:'center',gap:8,width:'100%'}}>
-                  <input value={feeTplName} onChange={e=>setFeeTplName(e.target.value)} placeholder="Template name (e.g. Eden Crest)" onKeyDown={e=>e.key==='Enter'&&saveFeeTemplate()} style={{...inputStyle,flex:1,padding:'8px 12px',fontSize:13}} />
-                  <button onClick={saveFeeTemplate} disabled={!feeTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',opacity:feeTplName.trim()?1:0.4}}>Save</button>
-                  <button onClick={()=>{setShowSaveFee(false);setFeeTplName('');}} style={{background:'none',border:'none',color:'var(--text-muted)',fontSize:12,cursor:'pointer'}}>Cancel</button>
-                </div>
-              )}
-            </div>
-
-            <div style={{display:'flex',gap:10}}>
-              <button onClick={()=>setView('comps')} style={{flex:1,padding:12,border:'1px solid var(--border)',borderRadius:8,background:'var(--surface)',cursor:'pointer',fontSize:14,fontWeight:600}}>
-                ← Back to Comps
-              </button>
-              <button onClick={()=>setView('projection')} style={{flex:1,padding:12,border:'none',borderRadius:8,background:'var(--accent)',color:'#fff',cursor:'pointer',fontSize:14,fontWeight:600,opacity:selectedComps.length>=MIN_COMPS?1:0.4}} disabled={selectedComps.length<MIN_COMPS}>
-                {selectedComps.length<MIN_COMPS ? `Need ${MIN_COMPS - selectedComps.length} more comp(s)` : 'View Projection →'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ════ PROJECTION ════ */}
       {view==='projection'&&(
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           {/* Navigation bar */}
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <button onClick={()=>setView('pm')} style={{display:'flex',alignItems:'center',gap:6,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
-              ← Back to PM Setup
+            <button onClick={()=>setView('comps')} style={{display:'flex',alignItems:'center',gap:6,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>
+              ← Back to Comps
             </button>
             <div style={{fontSize:12,color:'var(--text-muted)',display:'flex',alignItems:'center',gap:8}}>
               {selectedComps.length} comps selected
