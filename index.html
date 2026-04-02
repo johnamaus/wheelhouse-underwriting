@@ -124,6 +124,7 @@ const ALL_COLUMNS = [
   { key: 'anr_365_0', label: 'Asking rate', w: 80, fmt: fmtUSD },
   { key: 'occupancy_365_0', label: 'Occupancy', w: 65, fmt: fmtPct },
   { key: 'nrevenue_365_0', label: 'Total Revenue', w: 100, fmt: fmtUSD },
+  { key: '_rental_revenue', label: 'Rental Revenue', w: 105, fmt: fmtUSD, computed: true },
   { key: 'nrevpar_365_0', label: 'Total RevPAR', w: 80, fmt: fmtUSD },
   { key: 'star_rating', label: 'Avg. rating', w: 60 },
   { key: 'review_count', label: 'Review count', w: 70 },
@@ -131,7 +132,7 @@ const ALL_COLUMNS = [
   { key: 'distance_meters', label: 'Distance (m)', w: 70 },
 ];
 
-const DEFAULT_VISIBLE = new Set(['title','bedrooms','bathrooms','sleeps','nrevenue_365_0','occupancy_365_0','anr_365_0','nrevpar_365_0','star_rating','review_count','distance_meters']);
+const DEFAULT_VISIBLE = new Set(['title','bedrooms','bathrooms','sleeps','nrevenue_365_0','_rental_revenue','occupancy_365_0','anr_365_0','nrevpar_365_0','star_rating','review_count','distance_meters']);
 
 /* ─── API (via local Flask proxy) ─── */
 async function fetchCandidates({ integrationKey, userKey, lat, long, radius, limit, minBed, maxBed, minBath, maxBath, roomTypes }) {
@@ -680,9 +681,9 @@ const CompTable = ({ comps, selected, onToggle, visibleCols, pmCompany }) => {
     return gross - (occNights * _pnFee + stays * _psFee + gross * (_pctFee / 100));
   }, [_pctFee, _pnFee, _psFee, hasFees]);
   const sorted = useMemo(()=>[...comps].sort((a,b)=>{
-    if (sortKey === 'nrevenue_365_0' && hasFees) return (rentalRev(a) - rentalRev(b)) * sortDir;
+    if (sortKey === '_rental_revenue') return (rentalRev(a) - rentalRev(b)) * sortDir;
     return ((a[sortKey]??-Infinity)-(b[sortKey]??-Infinity))*sortDir;
-  }),[comps,sortKey,sortDir,rentalRev,hasFees]);
+  }),[comps,sortKey,sortDir,rentalRev]);
   const cols = ALL_COLUMNS.filter(c=>c.always||visibleCols.has(c.key));
 
   const th = { padding:'8px 8px', textAlign:'left', fontSize:11, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--text-muted)', cursor:'pointer', userSelect:'none', borderBottom:'2px solid var(--border)', whiteSpace:'nowrap', fontWeight:600, background:'var(--surface)' };
@@ -698,7 +699,7 @@ const CompTable = ({ comps, selected, onToggle, visibleCols, pmCompany }) => {
         </div>
       </div>
     );
-    if(col.key==='nrevenue_365_0' && hasFees) return fmtUSD(Math.round(rentalRev(comp)));
+    if(col.key==='_rental_revenue') return fmtUSD(Math.round(rentalRev(comp)));
     const v = comp[col.key];
     if(col.fmt) return col.fmt(v);
     if(col.key==='star_rating') return v!=null ? v.toFixed(1) : '—';
@@ -711,7 +712,7 @@ const CompTable = ({ comps, selected, onToggle, visibleCols, pmCompany }) => {
         <thead style={{ position:'sticky', top:0, zIndex:2 }}>
           <tr>
             <th style={{...th, width:36}}><input type="checkbox" checked={comps.length>0&&comps.every(c=>selected.has(c.listing_id))} onChange={()=>{comps.every(c=>selected.has(c.listing_id))?onToggle('__none'):onToggle('__all')}} style={{accentColor:'var(--accent)'}}/></th>
-            {cols.map(c=><th key={c.key} style={{...th,width:c.w}} onClick={()=>{if(sortKey===c.key)setSortDir(d=>d*-1);else{setSortKey(c.key);setSortDir(-1);}}}>{c.key==='nrevenue_365_0'&&hasFees?'Rental Revenue':c.label}{sortKey===c.key?(sortDir===1?' ↑':' ↓'):''}</th>)}
+            {cols.map(c=><th key={c.key} style={{...th,width:c.w}} onClick={()=>{if(sortKey===c.key)setSortDir(d=>d*-1);else{setSortKey(c.key);setSortDir(-1);}}}>{c.label}{sortKey===c.key?(sortDir===1?' ↑':' ↓'):''}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -720,7 +721,7 @@ const CompTable = ({ comps, selected, onToggle, visibleCols, pmCompany }) => {
             return (
               <tr key={comp.listing_id||i} style={{background:isSel?'var(--accent-bg)':'transparent'}} onMouseEnter={e=>e.currentTarget.style.background=isSel?'var(--accent-bg)':'var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background=isSel?'var(--accent-bg)':'transparent'}>
                 <td style={td}><input type="checkbox" checked={isSel} onChange={()=>onToggle(comp.listing_id)} style={{accentColor:'var(--accent)'}}/></td>
-                {cols.map(c=><td key={c.key} style={{...td, ...(c.key==='nrevenue_365_0'?{fontWeight:600,color:'var(--green)'}:{})}}>{cellVal(comp,c)}</td>)}
+                {cols.map(c=><td key={c.key} style={{...td, ...(c.key==='_rental_revenue'?{fontWeight:600,color:'var(--green)'}:c.key==='nrevenue_365_0'?{fontWeight:500,color:'var(--text-muted)'}:{})}}>{cellVal(comp,c)}</td>)}
               </tr>
             );
           })}
@@ -2864,8 +2865,8 @@ function App({ authUser, onLogout, setAuthUser }) {
         </div>
         <div style={{ display:'flex', gap:4, background:'var(--surface)', borderRadius:10, padding:3, border:'1px solid var(--border)' }}>
           <TabBtn label="Search" active={view==='search'} onClick={()=>setView('search')} />
-          <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
           <TabBtn label="PM Setup" active={view==='pm'} onClick={()=>setView('pm')} />
+          <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="Report" active={view==='report'} onClick={()=>setView('report')} />
           <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
