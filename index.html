@@ -1517,6 +1517,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const [companyImage, setCompanyImage] = useState(null);
   const [aboutTitle, setAboutTitle] = useState('About Us');
   const [companyDesc, setCompanyDesc] = useState('');
+  const [highlightsTitle, setHighlightsTitle] = useState('Highlights / Points of Differentiation');
   const [highlight1, setHighlight1] = useState('');
   const [highlight2, setHighlight2] = useState('');
   const [highlight3, setHighlight3] = useState('');
@@ -1544,7 +1545,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   const savePmTemplate = () => {
     const name = pmTplName.trim();
     if (!name) return;
-    const updated = { ...pmTemplates, [name]: { companyName, companyLogo, companyImage, aboutTitle, companyDesc, highlight1, highlight2, highlight3 } };
+    const updated = { ...pmTemplates, [name]: { companyName, companyLogo, companyImage, aboutTitle, companyDesc, highlightsTitle, highlight1, highlight2, highlight3 } };
     setPmTemplates(updated);
     localStorage.setItem('wh_pm_templates', JSON.stringify(updated));
     setPmTplName(''); setShowSavePm(false);
@@ -1554,6 +1555,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
     setActivePmTpl(name); setShowPmSelect(false);
     setCompanyName(t.companyName || ''); setCompanyLogo(t.companyLogo || null);
     setCompanyImage(t.companyImage || null); setAboutTitle(t.aboutTitle || 'About Us'); setCompanyDesc(t.companyDesc || '');
+    setHighlightsTitle(t.highlightsTitle || 'Highlights / Points of Differentiation');
     setHighlight1(t.highlight1 || ''); setHighlight2(t.highlight2 || ''); setHighlight3(t.highlight3 || '');
   };
   const deletePmTemplate = (name) => {
@@ -1591,7 +1593,14 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
 
   // Property Templates
   const [propTemplates, setPropTemplates] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('wh_prop_templates') || '{}'); } catch { return {}; }
+    try {
+      const t = JSON.parse(localStorage.getItem('wh_prop_templates') || '{}');
+      // Migrate old image-only templates
+      const old = JSON.parse(localStorage.getItem('wh_propimg_templates') || '{}');
+      const merged = { ...old, ...t };
+      if (Object.keys(old).length) { localStorage.setItem('wh_prop_templates', JSON.stringify(merged)); localStorage.removeItem('wh_propimg_templates'); }
+      return merged;
+    } catch { return {}; }
   });
   const [propTplName, setPropTplName] = useState('');
   const [showSaveProp, setShowSaveProp] = useState(false);
@@ -1651,6 +1660,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
         companyImageData: companyImage,
         aboutTitle,
         companyDesc,
+        highlightsTitle,
         highlights: [highlight1, highlight2, highlight3].filter(Boolean),
         agentName,
         agentImageData: agentImage,
@@ -1842,7 +1852,7 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
             <textarea value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} rows={3} placeholder="Brief description of your company..." style={{...inputFor(companyDesc),resize:'vertical'}} />
           </div>
           <div style={{gridColumn:'1/-1'}}>
-            <label style={labelFor(highlight1&&highlight2&&highlight3)}>Highlights / Points of Differentiation {!(highlight1&&highlight2&&highlight3) && <span style={{fontSize:10,fontStyle:'italic'}}>(empty)</span>}</label>
+            <input value={highlightsTitle} onChange={e=>setHighlightsTitle(e.target.value)} placeholder="Section title (e.g. Highlights / Points of Differentiation)" style={{...inputFor(highlightsTitle),fontWeight:700,marginBottom:6}} />
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               <input value={highlight1} onChange={e=>setHighlight1(e.target.value)} placeholder="Highlight 1" style={inputFor(highlight1)} />
               <input value={highlight2} onChange={e=>setHighlight2(e.target.value)} placeholder="Highlight 2" style={inputFor(highlight2)} />
@@ -2066,7 +2076,7 @@ async function captureCompMap(listingLat, listingLng, reportCompList) {
 async function generateReport(projection, assumptions, comps, selectedComps, pmCompany, propertyAddress, seasonality, extras) {
   const {
     heroImageData, reportBeds, reportBaths, companyName, companyLogoData, companyImageData,
-    aboutTitle, companyDesc, highlights, agentName, agentImageData, agentEmail, agentPhone,
+    aboutTitle, companyDesc, highlightsTitle, highlights, agentName, agentImageData, agentEmail, agentPhone,
     includeComps, selectedCompIds, reportFontColor: _rfc, reportAccentColor: _rac,
     listingLat, listingLng
   } = extras || {};
@@ -2361,7 +2371,7 @@ async function generateReport(projection, assumptions, comps, selectedComps, pmC
     </div>
     <div class="p2-about-divider-v"></div>
     ${highlights && highlights.length > 0 ? `<div class="p2-diff">
-      <div class="p2-diff-title">Our Differentiators:</div>
+      <div class="p2-diff-title">${highlightsTitle || 'Our Differentiators'}:</div>
       ${highlights.map(h => `<div class="p2-diff-item"><div class="p2-diff-check">✓</div><div class="p2-diff-text">${h}</div></div>`).join('')}
     </div>` : ''}
   </div>
@@ -2551,9 +2561,9 @@ function App({ authUser, onLogout, setAuthUser }) {
   const [showKeys, setShowKeys] = useState(false);
 
   const [searchMode, setSearchMode] = useState('address');
-  const [address, setAddress] = useState('605 Lyon St, San Francisco, CA 94117');
-  const [lat, setLat] = useState('37.7749');
-  const [lng, setLng] = useState('-122.4452');
+  const [address, setAddress] = useState('');
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
   const [listingId, setListingId] = useState('');
   const [radius, setRadius] = useState('5000');
   const [limit, setLimit] = useState('25');
