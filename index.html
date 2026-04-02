@@ -1142,9 +1142,9 @@ ${type === 'full-report' ? `
           </tr>
         </thead>
         <tbody>
-          ${compToShow.map(c => `
+          ${compToShow.map((c, idx) => `
             <tr>
-              <td class="comp-name">${(c.title || 'Comp').substring(0, 35)}</td>
+              <td class="comp-name">Comp ${idx + 1}</td>
               <td>${c.bedrooms || '-'}</td>
               <td>${c.bathrooms || '-'}</td>
               <td>${fmtUSD(Math.round(c.nrevenue_365_0 || 0))}</td>
@@ -2463,7 +2463,7 @@ ${includeComps && reportCompList.length > 0 ? `
       <div class="comp-block">
         <div class="comp-block-header">
           <div class="comp-block-dot" style="background:${dotColor}"></div>
-          <div class="comp-block-name">${(c.title || 'Comp').substring(0, 50)} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
+          <div class="comp-block-name">Comp ${idx + 1} · ${c.bedrooms || '?'}BR/${c.bathrooms || '?'}BA</div>
           <div class="comp-block-meta">Annual: ${fmtUSD(Math.round(compRentalRev))} · Occ: ${(compOcc * 100).toFixed(1)}% · ADR: ${fmtUSD(Math.round(compADR))}</div>
         </div>
         <table class="data-table comp">
