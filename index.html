@@ -1785,30 +1785,34 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
                 <span style={{background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-light)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600}}>{activePropTpl}</span>
                 <button onClick={()=>{setActivePropTpl('');setHeroImage(null);setReportBeds('');setReportBaths('');}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Clear template">&times;</button>
               </React.Fragment>
-            ) : Object.keys(propTemplates).length > 0 ? (
-              <div style={{position:'relative'}}>
-                <button onClick={()=>setShowPropSelect(!showPropSelect)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Select Template</button>
-                {showPropSelect && (
-                  <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:10,minWidth:160,padding:4}}>
-                    {Object.keys(propTemplates).map(name => (
-                      <div key={name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'6px 8px',borderRadius:4}}>
-                        <button onClick={()=>loadPropTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
-                        <button onClick={(e)=>{e.stopPropagation();deletePropTemplate(name);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Delete">&times;</button>
+            ) : (
+              <React.Fragment>
+                {Object.keys(propTemplates).length > 0 && (
+                  <div style={{position:'relative'}}>
+                    <button onClick={()=>setShowPropSelect(!showPropSelect)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>Select Template</button>
+                    {showPropSelect && (
+                      <div style={{position:'absolute',top:'100%',right:0,marginTop:4,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 4px 12px rgba(0,0,0,0.1)',zIndex:10,minWidth:180,padding:4}}>
+                        {Object.keys(propTemplates).map(name => (
+                          <div key={name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,padding:'6px 8px',borderRadius:4}}>
+                            <button onClick={()=>loadPropTemplate(name)} style={{background:'none',border:'none',color:'var(--text)',fontSize:12,fontWeight:500,cursor:'pointer',flex:1,textAlign:'left',padding:0}}>{name}</button>
+                            <button onClick={(e)=>{e.stopPropagation();deletePropTemplate(name);}} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:13,lineHeight:1}} title="Delete">&times;</button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
-              </div>
-            ) : null}
-            {!activePropTpl && (showSaveProp ? (
-              <div style={{display:'flex',alignItems:'center',gap:4}}>
-                <input value={propTplName} onChange={e=>setPropTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&savePropTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
-                <button onClick={savePropTemplate} disabled={!propTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
-                <button onClick={()=>setShowSaveProp(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
-              </div>
-            ) : (heroImage || reportBeds || reportBaths) ? (
-              <button onClick={()=>setShowSaveProp(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:500,cursor:'pointer',color:'var(--text-sec)'}}>Save as Template</button>
-            ) : null)}
+                {showSaveProp ? (
+                  <div style={{display:'flex',alignItems:'center',gap:4}}>
+                    <input value={propTplName} onChange={e=>setPropTplName(e.target.value)} placeholder="Template name" onKeyDown={e=>e.key==='Enter'&&savePropTemplate()} style={{...inputStyle,width:130,padding:'4px 8px',fontSize:11}} />
+                    <button onClick={savePropTemplate} disabled={!propTplName.trim()} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:5,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
+                    <button onClick={()=>setShowSaveProp(false)} style={{background:'none',border:'1px solid var(--border)',borderRadius:5,padding:'4px 8px',fontSize:11,cursor:'pointer',color:'var(--text-muted)'}}>Cancel</button>
+                  </div>
+                ) : (heroImage || reportBeds || reportBaths) ? (
+                  <button onClick={()=>setShowSaveProp(true)} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',color:'var(--text)'}}>Save as Template</button>
+                ) : null}
+              </React.Fragment>
+            )}
           </div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
