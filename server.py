@@ -116,6 +116,20 @@ def init_db():
             created_at TEXT NOT NULL
         )
     """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS reports (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at   TEXT NOT NULL,
+            address      TEXT,
+            lat          REAL,
+            lng          REAL,
+            radius       INTEGER,
+            comp_count   INTEGER,
+            snapshot     TEXT,
+            preview_html TEXT,
+            notes        TEXT
+        )
+    """)
     # Seed allowed emails from env var (only inserts new ones)
     for email in _SEED_EMAILS | ADMIN_EMAILS:
         db.execute(
@@ -794,6 +808,59 @@ def update_notes(search_id):
     data = request.get_json()
     db = get_db()
     db.execute("UPDATE searches SET notes = ? WHERE id = ?", (data.get("notes", ""), search_id))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+# ── Report History ──────────────────────────────────────────────
+@app.route("/api/reports", methods=["GET"])
+def list_reports():
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, created_at, address, lat, lng, comp_count, notes "
+        "FROM reports ORDER BY created_at DESC LIMIT 100"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/reports", methods=["POST"])
+def save_report():
+    data = request.get_json()
+    db = get_db()
+    db.execute(
+        "INSERT INTO reports (created_at, address, lat, lng, radius, comp_count, snapshot, preview_html, notes) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            datetime.utcnow().isoformat(),
+            data.get("address"),
+            data.get("lat"),
+            data.get("lng"),
+            data.get("radius"),
+            data.get("comp_count", 0),
+            json.dumps(data.get("snapshot", {})),
+            data.get("preview_html", ""),
+            data.get("notes", ""),
+        ),
+    )
+    db.commit()
+    return jsonify({"ok": True, "id": db.execute("SELECT last_insert_rowid()").fetchone()[0]})
+
+
+@app.route("/api/reports/<int:report_id>")
+def get_report(report_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM reports WHERE id = ?", (report_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Not found"}), 404
+    result = dict(row)
+    result["snapshot"] = json.loads(result["snapshot"]) if result["snapshot"] else {}
+    return jsonify(result)
+
+
+@app.route("/api/reports/<int:report_id>", methods=["DELETE"])
+def delete_report(report_id):
+    db = get_db()
+    db.execute("DELETE FROM reports WHERE id = ?", (report_id,))
     db.commit()
     return jsonify({"ok": True})
 

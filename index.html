@@ -1508,7 +1508,7 @@ function AdminPanel() {
 }
 
 /* ═══════════════ REPORT PANEL ═══════════════ */
-function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality, lat, lng, scenarioRentals }) {
+function ReportPanel({ projection, comps, selectedComps, pmCompany, address, assumptions, seasonality, lat, lng, scenarioRentals, onReportGenerated, restoredReport, onRestoredConsumed }) {
   const [heroImage, setHeroImage] = useState(null);
   const [reportBeds, setReportBeds] = useState(projection?.medBeds ? Math.round(projection.medBeds) : '');
   const [reportBaths, setReportBaths] = useState(projection?.medBaths ? Math.round(projection.medBaths) : '');
@@ -1631,6 +1631,34 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
   // Sync PM name if changed
   useEffect(() => { if (pmCompany?.name && !companyName) setCompanyName(pmCompany.name); }, [pmCompany?.name]);
 
+  // Restore from saved report
+  useEffect(() => {
+    if (!restoredReport) return;
+    const rp = restoredReport;
+    if (rp.heroImage !== undefined) setHeroImage(rp.heroImage);
+    if (rp.reportBeds !== undefined) setReportBeds(rp.reportBeds);
+    if (rp.reportBaths !== undefined) setReportBaths(rp.reportBaths);
+    if (rp.companyName !== undefined) setCompanyName(rp.companyName);
+    if (rp.companyLogo !== undefined) setCompanyLogo(rp.companyLogo);
+    if (rp.companyImage !== undefined) setCompanyImage(rp.companyImage);
+    if (rp.aboutTitle !== undefined) setAboutTitle(rp.aboutTitle);
+    if (rp.companyDesc !== undefined) setCompanyDesc(rp.companyDesc);
+    if (rp.highlightsTitle !== undefined) setHighlightsTitle(rp.highlightsTitle);
+    if (rp.highlight1 !== undefined) setHighlight1(rp.highlight1);
+    if (rp.highlight2 !== undefined) setHighlight2(rp.highlight2);
+    if (rp.highlight3 !== undefined) setHighlight3(rp.highlight3);
+    if (rp.agentName !== undefined) setAgentName(rp.agentName);
+    if (rp.agentImage !== undefined) setAgentImage(rp.agentImage);
+    if (rp.agentEmail !== undefined) setAgentEmail(rp.agentEmail);
+    if (rp.agentPhone !== undefined) setAgentPhone(rp.agentPhone);
+    if (rp.reportFontColor !== undefined) setReportFontColor(rp.reportFontColor);
+    if (rp.reportAccentColor !== undefined) setReportAccentColor(rp.reportAccentColor);
+    if (rp.includeComps !== undefined) setIncludeComps(rp.includeComps);
+    if (rp.selectedCompIds) setReportComps(new Set(rp.selectedCompIds));
+    if (rp.previewHtml) { setPreviewHtml(rp.previewHtml); setPreviewAddr(address); }
+    if (onRestoredConsumed) onRestoredConsumed();
+  }, [restoredReport]);
+
   const handleFileUpload = (setter) => (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1676,6 +1704,18 @@ function ReportPanel({ projection, comps, selectedComps, pmCompany, address, ass
       const result = await generateReport(projection, assumptions, comps, selectedComps, pmCompany, address, seasonality, reportExtras);
       setPreviewHtml(result.htmlContent);
       setPreviewAddr(result.propertyAddress);
+      // Auto-save report snapshot
+      if (onReportGenerated) {
+        onReportGenerated({
+          heroImage, reportBeds, reportBaths, companyName,
+          companyLogo, companyImage, aboutTitle, companyDesc,
+          highlightsTitle, highlight1, highlight2, highlight3,
+          agentName, agentImage, agentEmail, agentPhone,
+          includeComps, selectedCompIds: [...reportComps],
+          reportFontColor, reportAccentColor,
+          previewHtml: result.htmlContent,
+        });
+      }
     } catch(e) { console.error('Report generation failed:', e); }
     setGenerating(false);
   };
@@ -2655,11 +2695,16 @@ function App({ authUser, onLogout, setAuthUser }) {
   // Search history
   const [searchHistory, setSearchHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [reportHistory, setReportHistory] = useState([]);
+  const [restoredReport, setRestoredReport] = useState(null);
 
   const loadHistory = async () => {
     try { const r = await fetch('/api/searches'); setSearchHistory(await r.json()); } catch(e) { console.error(e); }
   };
-  useEffect(() => { loadHistory(); }, []);
+  const loadReportHistory = async () => {
+    try { const r = await fetch('/api/reports'); setReportHistory(await r.json()); } catch(e) { console.error(e); }
+  };
+  useEffect(() => { loadHistory(); loadReportHistory(); }, []);
 
   const saveSearch = async (addr, sLat, sLng, compArr) => {
     try {
@@ -2697,6 +2742,58 @@ function App({ authUser, onLogout, setAuthUser }) {
     e.stopPropagation();
     await fetch(`/api/searches/${id}`, { method: 'DELETE' });
     loadHistory();
+  };
+
+  const saveReport = async (reportPanelState) => {
+    try {
+      const snapshot = {
+        address, lat: parseFloat(lat), lng: parseFloat(lng),
+        radius: parseInt(radius) || 5000,
+        filters: { ...filters, roomTypes: selRoomTypes },
+        comps, selectedIds: [...selected], pmCompany, assumptions, seasonality,
+        reportPanel: reportPanelState,
+      };
+      await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: address || `${lat}, ${lng}`,
+          lat: parseFloat(lat), lng: parseFloat(lng),
+          radius: parseInt(radius) || 5000,
+          comp_count: reportPanelState.selectedCompIds?.length || [...selected].length,
+          snapshot,
+          preview_html: reportPanelState.previewHtml,
+        })
+      });
+      loadReportHistory();
+    } catch(e) { console.error('Failed to save report:', e); }
+  };
+
+  const loadSavedReport = async (id) => {
+    try {
+      const r = await fetch(`/api/reports/${id}`);
+      const data = await r.json();
+      const snap = data.snapshot;
+      if (!snap) return;
+      setAddress(snap.address || '');
+      setLat(String(snap.lat || ''));
+      setLng(String(snap.lng || ''));
+      setRadius(String(snap.radius || 5000));
+      if (snap.filters) { setFilters(snap.filters); setSelRoomTypes(snap.filters.roomTypes || []); }
+      if (snap.comps) setComps(snap.comps);
+      if (snap.selectedIds) setSelected(new Set(snap.selectedIds));
+      if (snap.pmCompany) setPmCompany(snap.pmCompany);
+      if (snap.assumptions) setAssumptions(snap.assumptions);
+      if (snap.seasonality) setSeasonality(snap.seasonality);
+      setRestoredReport({ ...snap.reportPanel, previewHtml: data.preview_html });
+      setView('report');
+    } catch(e) { console.error('Failed to load report:', e); }
+  };
+
+  const deleteSavedReport = async (id, e) => {
+    e.stopPropagation();
+    await fetch(`/api/reports/${id}`, { method: 'DELETE' });
+    loadReportHistory();
   };
 
   const handleSearch = async () => {
@@ -2878,7 +2975,7 @@ function App({ authUser, onLogout, setAuthUser }) {
           <TabBtn label="Comps" active={view==='comps'} onClick={()=>setView('comps')} count={comps.length||null} />
           <TabBtn label="Projection" active={view==='projection'} onClick={()=>setView('projection')} />
           <TabBtn label="Report" active={view==='report'} onClick={()=>setView('report')} />
-          <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();}} count={searchHistory.length||null} />
+          <TabBtn label="History" active={view==='history'} onClick={()=>{setView('history');loadHistory();loadReportHistory();}} count={(reportHistory.length+searchHistory.length)||null} />
           <button onClick={loadDemo} style={{background:'transparent',border:'none',color:'var(--text-muted)',padding:'7px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>Demo</button>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
@@ -3412,46 +3509,83 @@ function App({ authUser, onLogout, setAuthUser }) {
 
       {/* ════ HISTORY ════ */}
       {view==='history'&&(
-        <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
-          <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <div>
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          {/* Report History */}
+          <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+            <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)'}}>
+              <div style={{fontSize:15,fontWeight:700}}>Report History</div>
+              <div style={{fontSize:12,color:'var(--text-muted)',marginTop:2}}>{reportHistory.length} saved reports — auto-saved each time you generate</div>
+            </div>
+            {reportHistory.length === 0 ? (
+              <div style={{padding:40,textAlign:'center'}}>
+                <div style={{fontSize:30,marginBottom:8}}>📄</div>
+                <div style={{fontSize:14,fontWeight:600}}>No reports yet</div>
+                <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4}}>Reports are auto-saved each time you generate one.</div>
+              </div>
+            ) : (
+              <div>
+                {reportHistory.map(rpt => (
+                  <div key={rpt.id} onClick={()=>loadSavedReport(rpt.id)}
+                    style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--border-light)',cursor:'pointer',transition:'background .1s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <div style={{width:40,height:40,borderRadius:8,background:'var(--green-bg, #e6f9e6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📄</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{rpt.address || 'Report'}</div>
+                      <div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>
+                        {new Date(rpt.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}
+                        {rpt.comp_count ? ` · ${rpt.comp_count} comps` : ''}
+                      </div>
+                    </div>
+                    <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
+                      <span style={{background:'var(--accent-bg)',color:'var(--accent)',padding:'3px 10px',borderRadius:5,fontSize:11,fontWeight:600}}>View</span>
+                      <button onClick={(e)=>deleteSavedReport(rpt.id,e)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:14,padding:4}} title="Delete">✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search History */}
+          <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+            <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)'}}>
               <div style={{fontSize:15,fontWeight:700}}>Search History</div>
               <div style={{fontSize:12,color:'var(--text-muted)',marginTop:2}}>{searchHistory.length} saved searches</div>
             </div>
-          </div>
-          {searchHistory.length === 0 ? (
-            <div style={{padding:60,textAlign:'center'}}>
-              <div style={{fontSize:36,marginBottom:10}}>🕐</div>
-              <div style={{fontSize:15,fontWeight:600}}>No searches yet</div>
-              <div style={{fontSize:13,color:'var(--text-muted)',marginTop:4}}>Your searches will be saved automatically.</div>
-            </div>
-          ) : (
-            <div>
-              {searchHistory.map(s => (
-                <div key={s.id} onClick={()=>loadSavedSearch(s.id)}
-                  style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--border-light)',cursor:'pointer',transition:'background .1s'}}
-                  onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <div style={{width:40,height:40,borderRadius:8,background:'var(--accent-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📍</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.address || `${s.lat?.toFixed(4)}, ${s.lng?.toFixed(4)}`}</div>
-                    <div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>
-                      {new Date(s.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}
-                      {' · '}{s.comp_count} comps{s.radius ? ` · ${(s.radius/1000).toFixed(1)}km radius` : ''}
+            {searchHistory.length === 0 ? (
+              <div style={{padding:40,textAlign:'center'}}>
+                <div style={{fontSize:30,marginBottom:8}}>🕐</div>
+                <div style={{fontSize:14,fontWeight:600}}>No searches yet</div>
+                <div style={{fontSize:12,color:'var(--text-muted)',marginTop:4}}>Your searches will be saved automatically.</div>
+              </div>
+            ) : (
+              <div>
+                {searchHistory.map(s => (
+                  <div key={s.id} onClick={()=>loadSavedSearch(s.id)}
+                    style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--border-light)',cursor:'pointer',transition:'background .1s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--surface2)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <div style={{width:40,height:40,borderRadius:8,background:'var(--accent-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📍</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.address || `${s.lat?.toFixed(4)}, ${s.lng?.toFixed(4)}`}</div>
+                      <div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>
+                        {new Date(s.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}
+                        {' · '}{s.comp_count} comps{s.radius ? ` · ${(s.radius/1000).toFixed(1)}km radius` : ''}
+                      </div>
+                    </div>
+                    <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
+                      <span style={{background:'var(--accent-bg)',color:'var(--accent)',padding:'3px 10px',borderRadius:5,fontSize:11,fontWeight:600}}>{s.comp_count} comps</span>
+                      <button onClick={(e)=>deleteSavedSearch(s.id,e)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:14,padding:4}} title="Delete">✕</button>
                     </div>
                   </div>
-                  <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
-                    <span style={{background:'var(--accent-bg)',color:'var(--accent)',padding:'3px 10px',borderRadius:5,fontSize:11,fontWeight:600}}>{s.comp_count} comps</span>
-                    <button onClick={(e)=>deleteSavedSearch(s.id,e)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:14,padding:4}} title="Delete">✕</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* ─── Report ─── */}
-      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} lat={lat} lng={lng} scenarioRentals={scenarioRentals} />}
+      {view==='report' && <ReportPanel projection={projection} comps={comps} selectedComps={selectedComps} pmCompany={pmCompany} address={address} assumptions={assumptions} seasonality={seasonality} lat={lat} lng={lng} scenarioRentals={scenarioRentals} onReportGenerated={saveReport} restoredReport={restoredReport} onRestoredConsumed={()=>setRestoredReport(null)} />}
 
       {/* ─── Profile ─── */}
       {view==='profile' && <ProfilePanel authUser={authUser} onLogout={onLogout} setAuthUser={setAuthUser} />}
